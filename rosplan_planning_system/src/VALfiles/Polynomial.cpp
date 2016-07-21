@@ -1474,7 +1474,7 @@ Intervals NumericalSolution::getIntervals(const Comparison * comp, const State* 
       CoScalar lastPoint = j->second;
       double lastTime = j->first;
       j++;
-
+      lastPoint = lastPoint;
       while( j != points.end())
       {
           if( j->second != offSet) break;
@@ -1567,12 +1567,12 @@ Intervals NumericalSolution::getIntervals(const Comparison * comp, const State* 
             endPt = make_pair(theEndPoint,!(strict));
             aInt.intervals.push_back(make_pair(startPt,endPt));
             theAns = setUnion(theAns,aInt); 
-                        
+
        };
-                 
+
 	};
   
-            
+
    return theAns;
 };
 
@@ -1607,11 +1607,11 @@ bool Polynomial::checkInvariant(const Comparison * comp, const State* s,CoScalar
 
       		if( (degree == 1))
       		{
+      		cout << "WE HAVE " << evaluate(0) << " AND " << evaluate(t) << "\n";
       			if( (evaluate(0) > - accuracy) && (evaluate(t) > - accuracy))
       			{
       				return true;
       			};
-
       			return false;
       		}
       		else if( degree > 1 )

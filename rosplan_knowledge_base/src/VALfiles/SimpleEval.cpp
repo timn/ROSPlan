@@ -33,7 +33,7 @@ using namespace VAL;
 
 namespace Inst {
 
-const bool simpleEvalDebug = false;
+bool SimpleEvaluator::verbose = false;
 
 IState InitialStateEvaluator::initState;
 IState0Arity InitialStateEvaluator::init0State;
@@ -43,8 +43,8 @@ void InitialStateEvaluator::setInitialState()
 {
 	initState.clear();
 	init0State.clear();
-	
-	for(pc_list<simple_effect*>::const_iterator i = 
+
+	for(pc_list<simple_effect*>::const_iterator i =
 				current_analysis->the_problem->initial_state->add_effects.begin();
 				i != current_analysis->the_problem->initial_state->add_effects.end();++i)
 	{
@@ -73,8 +73,8 @@ void InitialStateEvaluator::evaluateSimpleGoal(FastEnvironment * f,simple_goal *
 			unknownFalse = true;
 			return;
 		};
-		
-		if (simpleEvalDebug) cout << s->getProp()->head->getName() << " is static\n";
+
+		if (SimpleEvaluator::verbose) cout << s->getProp()->head->getName() << " is static\n";
 
 		unknownTrue = false;
 		unknownFalse = false;
@@ -118,11 +118,11 @@ void InitialStateEvaluator::evaluateSimpleGoal(FastEnvironment * f,simple_goal *
 			valueTrue = true;
 			valueFalse = false;
 			return;
-		}; 
+		};
 		valueTrue = (init0State.find(s->getProp()->head) != init0State.end());
 		valueFalse = !valueTrue;
 		return;
-		
+
 	}
 	unknownTrue = true;
 	unknownFalse = true;
@@ -146,7 +146,7 @@ bool SimpleEvaluator::equiv(const parameter_symbol_list * s,const parameter_symb
 	};
 	return true;
 };
-					
+
 void SimpleEvaluator::visit_simple_goal(simple_goal * s)
 {
 	if(EPS(s->getProp()->head)->getParent() == this->equality)
@@ -154,10 +154,10 @@ void SimpleEvaluator::visit_simple_goal(simple_goal * s)
 //	cout << "Got equality\n";
 		unknownTrue = false;
 		unknownFalse = false;
-		valueTrue = ((*f)[s->getProp()->args->front()] == 
+		valueTrue = ((*f)[s->getProp()->args->front()] ==
 						(*f)[s->getProp()->args->back()]);
 		valueFalse = !valueTrue;
-		
+
 		if(s->getPolarity() == E_NEG)
 		{
 			const bool vt = valueTrue;
@@ -167,7 +167,7 @@ void SimpleEvaluator::visit_simple_goal(simple_goal * s)
 		return;
 	};
 	primev->evaluateSimpleGoal(f,s);
-	if (simpleEvalDebug) {
+	if (SimpleEvaluator::verbose) {
 		if (!unknownTrue && valueTrue) {
 			cout << "\t\tValue of fact known to be true\n";
 		}
@@ -195,7 +195,7 @@ void SimpleEvaluator::visit_qfied_goal(qfied_goal * p)
 	for(var_symbol_list::const_iterator pi = p->getVars()->begin();
 			pi != p->getVars()->end();++pi,++i)
 	{
-		if(instantiatedOp::getValues().find((*pi)->type) == instantiatedOp::getValues().end()) 
+		if(instantiatedOp::getValues().find((*pi)->type) == instantiatedOp::getValues().end())
 		{
 			instantiatedOp::getValues()[(*pi)->type] = tc->range(*pi);
 		};
@@ -207,7 +207,7 @@ void SimpleEvaluator::visit_qfied_goal(qfied_goal * p)
 		c *= instantiatedOp::getValues()[(*pi)->type].size();
 	};
 
-	
+
 	valueTrue = (p->getQuantifier() == VAL::E_FORALL);
 	valueFalse = !valueTrue;
 	unknownTrue = false;
@@ -226,17 +226,17 @@ void SimpleEvaluator::visit_qfied_goal(qfied_goal * p)
 		FastEnvironment toPass(fe);
 		f = &toPass;
 		p->getGoal()->visit(this);
-		
+
 		if (p->getQuantifier() == VAL::E_FORALL) {
 ;			if(reallyFalse()) {
-				if (simpleEvalDebug) cout << "Contradictory child of forall\n";
+				if (SimpleEvaluator::verbose) cout << "Contradictory child of forall\n";
 				return;
 			}
 			uTrue = uTrue || unknownTrue;
 			uFalse = uFalse || unknownFalse;
 		} else {
 			if(reallyTrue()) {
-				if (simpleEvalDebug) cout << "Tautologous child of exists\n";
+				if (SimpleEvaluator::verbose) cout << "Tautologous child of exists\n";
 				return;
 			}
 			uTrue = uTrue || unknownTrue;
@@ -262,7 +262,7 @@ void SimpleEvaluator::visit_qfied_goal(qfied_goal * p)
 
 void SimpleEvaluator::visit_conj_goal(conj_goal * c)
 {
-	if (simpleEvalDebug) cout << "And...\n";
+	if (SimpleEvaluator::verbose) cout << "And...\n";
 	bool uTrue = false;
 	bool uFalse = false;
 
@@ -275,7 +275,7 @@ void SimpleEvaluator::visit_conj_goal(conj_goal * c)
 	{
 		(*i)->visit(this);
 		if(reallyFalse()) {
-			if (simpleEvalDebug) cout << "Contradictory child of and\n";
+			if (SimpleEvaluator::verbose) cout << "Contradictory child of and\n";
 			return;
 		}
 		uTrue = uTrue || unknownTrue;
@@ -283,27 +283,27 @@ void SimpleEvaluator::visit_conj_goal(conj_goal * c)
 	};
 	unknownTrue = uTrue;
 	unknownFalse = uFalse;
-        
-        if (simpleEvalDebug) {
+
+        if (SimpleEvaluator::verbose) {
             if (!unknownTrue && valueTrue) {
                 cout << "\t\tValue of AND known to be true\n";
             }
             if (!unknownFalse && valueFalse) {
                 cout << "\t\tValue of AND known to be false\n";
             }
-            if (unknownTrue) {                
+            if (unknownTrue) {
                 cout << "\t\tValue of AND might be true\n";
             }
-            if (unknownFalse) {                
+            if (unknownFalse) {
                 cout << "\t\tValue of AND might be false\n";
             }
 
         }
 };
-	
+
 void SimpleEvaluator::visit_disj_goal(disj_goal * d)
 {
-	if (simpleEvalDebug) cout << "Or...\n";
+	if (SimpleEvaluator::verbose) cout << "Or...\n";
 	bool uTrue = false;
 	bool uFalse = false;
 
@@ -317,7 +317,7 @@ void SimpleEvaluator::visit_disj_goal(disj_goal * d)
 	{
 		(*i)->visit(this);
 		if(reallyTrue()) {
-			if (simpleEvalDebug) cout << "Tautologous child of or\n";
+			if (SimpleEvaluator::verbose) cout << "Tautologous child of or\n";
 			return;
 		}
 		uTrue = uTrue || unknownTrue;
@@ -334,22 +334,22 @@ void SimpleEvaluator::visit_timed_goal(timed_goal * t)
 
 void SimpleEvaluator::visit_imply_goal(imply_goal * ig)
 {
-	if (simpleEvalDebug) cout << "Implies...\n";
+	if (SimpleEvaluator::verbose) cout << "Implies...\n";
 	ig->getAntecedent()->visit(this);
 	if(unknownTrue || unknownFalse) {
-		if (simpleEvalDebug) cout << "Implication with an unknown antecedent\n";
+		if (SimpleEvaluator::verbose) cout << "Implication with an unknown antecedent\n";
 		unknownTrue = true;
 		unknownFalse = true;
 		return;
 	}
 	if(valueTrue)
 	{
-		if (simpleEvalDebug) cout << "Antecedent tautologous, checking consequent\n";
+		if (SimpleEvaluator::verbose) cout << "Antecedent tautologous, checking consequent\n";
 		ig->getConsequent()->visit(this);
 	}
 	else
 	{
-		if (simpleEvalDebug) cout << "Antecedent contradictory, ex falso quodlibet\n";
+		if (SimpleEvaluator::verbose) cout << "Antecedent contradictory, ex falso quodlibet\n";
 		valueTrue = true;
 		valueFalse = false;
 	}
@@ -357,7 +357,7 @@ void SimpleEvaluator::visit_imply_goal(imply_goal * ig)
 
 void SimpleEvaluator::visit_neg_goal(neg_goal * ng)
 {
-	if (simpleEvalDebug) cout << "Negating...\n";
+	if (SimpleEvaluator::verbose) cout << "Negating...\n";
 	ng->getGoal()->visit(this);
 	if(!unknownTrue && !unknownFalse)
 	{
@@ -369,7 +369,7 @@ void SimpleEvaluator::visit_neg_goal(neg_goal * ng)
 		unknownFalse = true;
 	}
 
-	if (simpleEvalDebug) {
+	if (SimpleEvaluator::verbose) {
 		if (valueTrue) {
 			cout << "Now cast as true\n";
 		} else if (valueFalse) {
@@ -393,12 +393,12 @@ void SimpleEvaluator::visit_comparison(comparison * c)
 {
 //	unknown = true;
 //	return;
-	
+
 	isFixed = false;
 	undefined = false;
 	isDuration = false;
 	c->getLHS()->visit(this);
-	if(undefined) 
+	if(undefined)
 	{
 		unknownTrue = false;
 		valueTrue = false;
@@ -418,7 +418,7 @@ void SimpleEvaluator::visit_comparison(comparison * c)
 	bool lhsFixed = isFixed;
 	double lhsval = nvalue;
 	//bool lhsDur = isDuration;
-	
+
 	isDuration = false;
 	c->getRHS()->visit(this);
 	if(undefined)
@@ -427,7 +427,7 @@ void SimpleEvaluator::visit_comparison(comparison * c)
 		unknownFalse = valueFalse = false;
 		return;
 	};
-	
+
 	isFixed &= lhsFixed;
 	if(isFixed)
 	{
@@ -436,9 +436,9 @@ void SimpleEvaluator::visit_comparison(comparison * c)
 		switch(c->getOp())
 		{
 			case E_GREATER:
-				valueTrue = (lhsval > nvalue);  // I think this is a problem case if 
+				valueTrue = (lhsval > nvalue);  // I think this is a problem case if
 											// we are comparing with ?duration in the
-											// special duration field.... 
+											// special duration field....
 				break;
 			case E_GREATEQ:
 				valueTrue = (lhsval >= nvalue);
@@ -464,15 +464,15 @@ void SimpleEvaluator::visit_comparison(comparison * c)
 void SimpleEvaluator::visit_action(action * op)
 {
 	if (op->precondition) {
-            if (simpleEvalDebug) cout << "Visiting operator preconditions\n";
+            if (SimpleEvaluator::verbose) cout << "Visiting operator preconditions\n";
             op->precondition->visit(this);
-            if (simpleEvalDebug) {
+            if (SimpleEvaluator::verbose) {
                 if(reallyTrue()) {
                     cout << "Preconditions are really true\n";
                 }
                 if (reallyFalse()) {
                     cout << "Preconditions are really false\n";
-                }                
+                }
             }
         }
 };
@@ -563,6 +563,11 @@ void SimpleEvaluator::visit_special_val_expr(special_val_expr * s)
 	if(s->getKind() == E_DURATION_VAR) isDuration = true;
 	isFixed = true; // Possibly inappropriate...
 };
+
+void SimpleEvaluator::visit_class_func_term(class_func_term * s)
+{
+    isFixed = true; // But only if the function really is constant... Need to change when we have non-constant externals.
+}
 
 void SimpleEvaluator::visit_func_term(func_term * s)
 {

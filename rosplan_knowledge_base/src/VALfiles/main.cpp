@@ -54,6 +54,7 @@
 #include <cstdio>
 #include <iostream>
 #include <fstream>
+#include <time.h>
 #include "ptree.h"
 #include "FlexLexer.h"
 #include "Utils.h"
@@ -74,7 +75,7 @@ extern int yyparse();
 extern int yydebug;
 
 namespace VAL {
-  
+
 parse_category* top_thing = NULL;
 
 analysis an_analysis;
@@ -91,12 +92,12 @@ bool LaTeX;
 
 ostream * report = &cout;
 
-bool makespanDefault;
+
 };
 
 char * current_filename;
 
-typedef map<double,vector<string> > Ranking;
+typedef map<double,vector<pair<string,vector<double> > > > Ranking;
 
 using namespace VAL;
 
@@ -107,7 +108,7 @@ void usage()
              << "\nAuthors: Derek Long, Richard Howey, Stephen Cresswell and Maria Fox\n"
              << "http://planning.cis.strath.ac.uk/VAL/\n\n"
              << "Usage: validate [options] domainFile problemFile planFile1 ...\n"
-		     << "Options:\n    -t <n>     -- Set tolerance to (float) value of n.\n" 
+		     << "Options:\n    -t <n>     -- Set tolerance to (float) value of n.\n"
 		     << "    -r <n> <p> <m> -- Analyse the plan for its robustness, each action timestamp to within a (float) value of n, each PNE to within a (float value) of p, for m test plans.\n"
 		     << "    -ra <p>    -- Calculate robustness of plan with respect to varying action timestamps, whilst varying PNEs to within a (float value) of p (default p = 0).\n"
 		     << "    -rp <n>    -- Calculate robustness of plan with respect to varying PNEs, whilst varying action timestamps to within a (float value) of n (default n = 0).\n"
@@ -129,7 +130,8 @@ void usage()
 	     <<         "    -s         -- Silent mode: output is generated only when errors occur\n"
 	     << "    -S         -- Silent mode with values: outputs only plan values in order (failed for bad plan)\n"
 			 << "    -m         -- Use makespan as metric for temporal plans (overrides any other metric).\n"
-			 << "    -f <file>  -- LaTeX report will be stored in file 'file.tex'\n" 
+	     << "    -L         -- Add step length as metric (in addition to any other metric).\n"
+			 << "    -f <file>  -- LaTeX report will be stored in file 'file.tex'\n"
 		     << "Multiple plan file arguments can be appended for checking.\n\n";
 
 };
@@ -138,7 +140,7 @@ void usage()
 plan * getPlan(int & argc,char * argv[],int & argcount,TypeChecker & tc,vector<string> & failed,string & name)
 {
      plan * the_plan;
-     
+
 		if(LaTeX)
 		{
 			latex.LaTeXPlanReportPrepare(argv[argcount]);
@@ -151,7 +153,7 @@ plan * getPlan(int & argc,char * argv[],int & argcount,TypeChecker & tc,vector<s
 	    {
 	    	failed.push_back(name);
 	    	*report << "Bad plan file!\n";
-	    	the_plan = 0; return the_plan; 
+	    	the_plan = 0; return the_plan;
 	    };
 
 	    yfl = new yyFlexLexer(&planFile,&cout);
@@ -167,7 +169,7 @@ plan * getPlan(int & argc,char * argv[],int & argcount,TypeChecker & tc,vector<s
 	    	if(Silent < 2) *report << "Bad plan description!\n";
 	    	if(Silent > 1) *report << "failed\n";
 	    	delete the_plan;
-	    	the_plan = 0; return the_plan;       
+	    	the_plan = 0; return the_plan;
 	    };
 
 		if(the_plan->getTime() >= 0) {name += " - Planner run time: "; name += toString(the_plan->getTime());};
@@ -180,12 +182,12 @@ vector<plan_step *> getTimedInitialLiteralActions()
 {
 
   vector<plan_step *> timedIntitialLiteralActions;
-  
+
     if(an_analysis.the_problem->initial_state->timed_effects.size() != 0)
       {
           int count = 1;
            for(pc_list<timed_effect*>::const_iterator e = an_analysis.the_problem->initial_state->timed_effects.begin(); e != an_analysis.the_problem->initial_state->timed_effects.end(); ++e)
-           {                   
+           {
                   operator_symbol * timed_initial_lit = an_analysis.op_tab.symbol_put("Timed Initial Literal Action "+ toString(count++));
 
                   action  * timed_initial_lit_action = new action(timed_initial_lit,new var_symbol_list(),new conj_goal(new goal_list()),(*e)->effs,new var_symbol_table());
@@ -208,8 +210,8 @@ void deleteTimedIntitialLiteralActions(vector<plan_step *> tila)
 {
   for(vector<plan_step *>::iterator i = tila.begin(); i != tila.end(); ++i)
   {
-    delete *i;    
-  };  
+    delete *i;
+  };
 };
 
 //execute all the plans in the usual manner without robustness checking
@@ -221,11 +223,11 @@ void executePlans(int & argc,char * argv[],int & argcount,TypeChecker & tc,const
   vector<string> queries;
 
 	while(argcount < argc)
-	{       
+	{
       string name(argv[argcount]);
 
       plan * the_plan = getPlan(argc,argv,argcount,tc,failed,name);
-      if(the_plan == 0) continue;     
+      if(the_plan == 0) continue;
 
       plan * copythe_plan = new plan(*the_plan);
       plan * planNoTimedLits = new plan();
@@ -246,7 +248,7 @@ void executePlans(int & argc,char * argv[],int & argcount,TypeChecker & tc,const
        };
 
        copythe_plan->clear(); delete copythe_plan;
-       
+
        PlanRepair pr(timedInitialLiteralActions,deadLine,derivRules,tolerance,tc,an_analysis.the_domain->ops,
 	    			an_analysis.the_problem->initial_state,
 	    			the_plan,planNoTimedLits,an_analysis.the_problem->metric,lengthDefault,
@@ -278,21 +280,33 @@ void executePlans(int & argc,char * argv[],int & argcount,TypeChecker & tc,const
 		    	{
 		    		if(!(pr.getValidator().hasInvariantWarnings()))
 		    		{
-		    			rnk[pr.getValidator().finalValue()].push_back(name);
+		    			vector<double> vs(pr.getValidator().finalValue());
+		    			rnk[vs[0]].push_back(make_pair(name,vs));
 		    			if(!Silent && !LaTeX) *report << "Plan valid\n";
 		    			if(LaTeX) *report << "\\\\\n";
-		    			if(!Silent && !LaTeX) *report << "Final value: " << pr.getValidator().finalValue() << "\n";
-		    			if(Silent > 1) 
+		    			if(!Silent && !LaTeX) *report << "Final value: ";
+		    			if(Silent > 1 || (!Silent && !LaTeX))
 		    			{
-		    				*report << pr.getValidator().finalValue() << "\n";
+		    				vector<double> vs(pr.getValidator().finalValue());
+		    				for(unsigned int i = 0;i < vs.size();++i)
+		    					*report << vs[i] << " ";
+		    				*report << "\n";
 		    			}
 		    		}
 		    		else
 		    		{
-						rnkInv[pr.getValidator().finalValue()].push_back(name);
+		    			vector<double> vs(pr.getValidator().finalValue());
+						rnkInv[vs[0]].push_back(make_pair(name,vs));
 		    			if(!Silent && !LaTeX) *report << "Plan valid (subject to further invariant checks)\n";
 		    			if(LaTeX) *report << "\\\\\n";
-		    			if(!Silent && !LaTeX) *report << "Final value: " << pr.getValidator().finalValue();
+		    			if(!Silent && !LaTeX)
+		    			{
+		    				*report << "Final value: ";
+		    				vector<double> vs(pr.getValidator().finalValue());
+		    				for(unsigned int i = 0;i < vs.size();++i)
+		    					*report << vs[i] << " ";
+		    				*report << "\n";
+		    			};
 						if(Silent > 1)
 						{
 							*report << "failed\n";
@@ -322,7 +336,7 @@ void executePlans(int & argc,char * argv[],int & argcount,TypeChecker & tc,const
          		    	if(ContinueAnyway)
                   {
                      if(LaTeX) *report << "\nPlan failed to execute - checking goal\\\\\n";
-                     else 
+                     else
                      {
                      	if(Silent < 2) *report << "\nPlan failed to execute - checking goal\n";
 						if(Silent > 1) *report << "failed\n";
@@ -409,7 +423,7 @@ void executePlans(int & argc,char * argv[],int & argcount,TypeChecker & tc,const
 
 
 		if(an_analysis.the_problem->metric &&
-				an_analysis.the_problem->metric->opt == E_MINIMIZE)
+				an_analysis.the_problem->metric->opt.front() == E_MINIMIZE)
 		{
 			if(LaTeX)
 			{
@@ -418,7 +432,7 @@ void executePlans(int & argc,char * argv[],int & argcount,TypeChecker & tc,const
 			};
 
 
-			if(!Silent && !LaTeX) for_each(rnk.begin(),rnk.end(),showList());
+			if(!Silent) for_each(rnk.begin(),rnk.end(),showList());
 
 			if(LaTeX) *report << "\\end{tabbing}\n";
 
@@ -432,7 +446,7 @@ void executePlans(int & argc,char * argv[],int & argcount,TypeChecker & tc,const
 			};
 
 
-			if(!Silent && !LaTeX) for_each(rnk.rbegin(),rnk.rend(),showList());
+			if(!Silent) for_each(rnk.rbegin(),rnk.rend(),showList());
 
 
 
@@ -457,7 +471,7 @@ void executePlans(int & argc,char * argv[],int & argcount,TypeChecker & tc,const
 
 
 		if(an_analysis.the_problem->metric &&
-				an_analysis.the_problem->metric->opt == E_MINIMIZE)
+				an_analysis.the_problem->metric->opt.front() == E_MINIMIZE)
 		{
 			if(LaTeX)
 			{
@@ -543,8 +557,8 @@ void analysePlansForRobustness(int & argc,char * argv[],int & argcount,TypeCheck
       plan * the_plan = getPlan(argc,argv,argcount,tc,failed,name);
       if(the_plan == 0) continue;
 
-      
-      
+
+
       RobustPlanAnalyser rpa(robustMeasure,noTestPlans,derivRules,tolerance,tc,an_analysis.the_domain->ops,
 	    			an_analysis.the_problem->initial_state,
 	    			the_plan,an_analysis.the_problem->metric,lengthDefault,
@@ -555,12 +569,12 @@ void analysePlansForRobustness(int & argc,char * argv[],int & argcount,TypeCheck
       delete the_plan;
 
   };
-  
+
   deleteTimedIntitialLiteralActions(timedIntitialLiteralActions);
-  
+
 };
 
-//main 
+//main
 int main(int argc,char * argv[])
 {
 	report->precision(10);
@@ -583,11 +597,12 @@ int main(int argc,char * argv[])
   EventPNEJuddering = false;
   TestingPNERobustness = false;
   RobustPNEJudder = 0;
-  
+
 	InvariantWarnings = false;
 	LaTeX = false;
 	ofstream possibleLatexReport;
 	makespanDefault = false;
+	stepLengthDefault = false;
    bool CheckDPs = true;
    bool giveAdvice = true;
 
@@ -599,17 +614,17 @@ int main(int argc,char * argv[])
   bool calculatePNERobustness = false;
   RobustMetric robustMetric = MAX;
   RobustDist robustDist = UNIFORM;
-  
+
 	string s;
 	bool ganttObjectsGot = false;
-	
+
     int argcount = 1;
     while(argcount < argc && argv[argcount][0] == '-')
     {
 		switch(argv[argcount][1])
 		{
-    		case 'v': 
-	    	
+    		case 'v':
+
 	    		Verbose = true;
 	    		++argcount;
 	    		break;
@@ -617,7 +632,7 @@ int main(int argc,char * argv[])
 		case 'r':
 
 			Robust = true; ++argcount;
-          
+
 
           if(argv[argcount-1][2] == 'a')
           {
@@ -627,10 +642,10 @@ int main(int argc,char * argv[])
                 RobustPNEJudder = atof(argv[argcount++]);
               }
               else RobustPNEJudder = 0;
-              
+
           }
           else if(argv[argcount-1][2] == 'p')
-          {              
+          {
 
               calculatePNERobustness = true;
               if(argv[argcount][0] >= '0' && argv[argcount][0] <= '9')
@@ -638,18 +653,18 @@ int main(int argc,char * argv[])
                 robustMeasure = atof(argv[argcount++]);
               }
               else robustMeasure = 0;
-              
+
 
           }
           else if(argv[argcount-1][2] == 'm')
-          {             
+          {
 
       	 			if(argv[argcount][0] == 'd') robustMetric = DELAY;
               else if(argv[argcount][0] == 'a') robustMetric = ACCUM;
               else if(argv[argcount][0] == 'm') robustMetric = MAX;
-                          
+
               ++argcount;
-              
+
           }
           else if(argv[argcount-1][2] == 'd')
           {
@@ -657,13 +672,13 @@ int main(int argc,char * argv[])
       	 			if(argv[argcount][0] == 'u') robustDist = UNIFORM;
               else if(argv[argcount][0] == 'n') robustDist = NORMAL;
               else if(argv[argcount][0] == 'p') robustDist = PNORM;
-              
+
               ++argcount;
-              
+
           }
           else
           {
-                     
+
                if(argv[argcount][0] >= '0' && argv[argcount][0] <= '9')
                {
                  robustMeasure = atof(argv[argcount++]);
@@ -683,8 +698,8 @@ int main(int argc,char * argv[])
                }
                else noTestPlans = 1000;
            };
-	    		
-	    		break;       
+
+	    		break;
 		case 's':
 
 		  Silent = 1;
@@ -701,9 +716,9 @@ int main(int argc,char * argv[])
 	 			EventPNEJuddering = true;
 	 			++argcount;
 	 			break;
-    	         
+
     		case 't':
-	   
+
 	    		tolerance = atof(argv[++argcount]);
 	    		++argcount;
 	    		break;
@@ -715,12 +730,12 @@ int main(int argc,char * argv[])
 	 			break;
 
 	    	case 'h':
-	    	
+
 	    		usage();
 	    	    exit(0);
 
-			case 'c': 
-	    	
+			case 'c':
+
 
 	    		ContinueAnyway = true;
 	    		++argcount;
@@ -734,7 +749,7 @@ int main(int argc,char * argv[])
 	    		ContinueAnyway = true;
 	    		++argcount;
 	    		break;
-        
+
         case 'd':
 
 	    		CheckDPs = false;
@@ -742,14 +757,14 @@ int main(int argc,char * argv[])
 	    		break;
 
 
-	    	case 'i': 
-	    	
+	    	case 'i':
+
 	    		InvariantWarnings = true;
 	    		++argcount;
 	    		break;
 
-	    	case 'l': 
-	    	
+	    	case 'l':
+
 	    		LaTeX = true;
 	    		Verbose = true;
 	    		++argcount;
@@ -767,13 +782,13 @@ int main(int argc,char * argv[])
 	    		++argcount;
 	    		break;
 	    	case 'o':
-	    	
+
 				++argcount;
 				if(ganttObjectsGot) break;
-				
+
 	    		while( !( (argv[argcount][0] == '-') && (argv[argcount][1] == 'o')) )
 	    		{
-	    			latex.addGanttObject(argv[argcount++]);	
+	    			latex.addGanttObject(argv[argcount++]);
 	    		};
 
 	    		ganttObjectsGot = true;
@@ -784,10 +799,14 @@ int main(int argc,char * argv[])
 
  	    		++argcount;
 	    		break;
+		case 'L':
+		  stepLengthDefault = true;
+		  ++argcount;
+		  break;
 	    	case 'a':
 	    		giveAdvice = false;
  	    		++argcount;
-	    		break;       
+	    		break;
 	    	case 'f':
 	    		{
 	    			LaTeX = true;
@@ -807,7 +826,7 @@ int main(int argc,char * argv[])
     };
 
 
-	if(argcount>=argc) 
+	if(argcount>=argc)
 	{
 		usage();
 		return 0;
@@ -819,15 +838,15 @@ int main(int argc,char * argv[])
 		//LaTeX header
 	   latex.LaTeXHeader();
 	}
-	
+
     ifstream domainFile(argv[argcount++]);
-    if(!domainFile) 
+    if(!domainFile)
     {
     	cerr << "Bad domain file!\n";
     	if(LaTeX) *report << "\\section{Error!} Bad domain file! \n \\end{document}\n";
     	exit(-1);
     };
-    
+
     yfl= new yyFlexLexer(&domainFile,&cout);
 
     yydebug=0;
@@ -839,35 +858,35 @@ int main(int argc,char * argv[])
     	cerr << "Problem in domain definition!\n";
     	if(LaTeX) *report << "\\section{Error!} Problem in domain definition! \n \\end{document}\n";
     	exit(-1);
-    };   
-    
+    };
+
     TypeChecker tc(current_analysis);
 
 	if(LaTeX) Verbose = false;
     bool typesOK = tc.typecheckDomain();
 
     if(LaTeX) Verbose = true;
-    
+
     if(!typesOK)
     {
     	cerr << "Type problem in domain description!\n";
-    	
+
     	if(LaTeX)
     	{
     		*report << "\\section{Error!} Type problem in domain description! \n \\begin{verbatim}";
     		tc.typecheckDomain();
     		*report << "\\end{verbatim} \\end{document}\n";
     	};
-    	
+
 
     	exit(-1);
     };
 
-	if(argcount>=argc) 
+	if(argcount>=argc)
 	{
 		return 0;
 	};
-	
+
     ifstream problemFile(argv[argcount++]);
     if(!problemFile)
     {
@@ -875,7 +894,7 @@ int main(int argc,char * argv[])
     	if(LaTeX) *report << "\\section{Error!} Bad problem file! \n \\end{document}\n";
     	exit(-1);
     };
-    
+
     yfl = new yyFlexLexer(&problemFile,&cout);
     yyparse();
     delete yfl;
@@ -887,34 +906,34 @@ int main(int argc,char * argv[])
 		exit(-1);
 	};
 
-	
+
 	if(LaTeX)
 	{
       latex.LaTeXDomainAndProblem();
 	};
 
-	
+
 
 	const DerivationRules * derivRules = new DerivationRules (an_analysis.the_domain->drvs,an_analysis.the_domain->ops);
-         
+
 	if(CheckDPs && !derivRules->checkDerivedPredicates())
 	{
 		if(LaTeX) latex.LaTeXEnd();
 		exit(-1);
 
 	};
-      
+
   if(Robust)
      analysePlansForRobustness(argc,argv,argcount,tc,derivRules,tolerance,lengthDefault,giveAdvice,robustMeasure,noTestPlans,calculateActionRobustness,calculatePNERobustness,robustMetric,robustDist);
-  else     
+  else
      executePlans(argc,argv,argcount,tc,derivRules,tolerance,lengthDefault,giveAdvice);
-   
-  
+
+
 	delete derivRules;
-  
+
 	//LaTeX footer
 	if(LaTeX) latex.LaTeXEnd();
-   
+
   }
   catch(exception & e)
   {

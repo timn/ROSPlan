@@ -26,6 +26,7 @@
 
 #ifndef __INSTANTIATION
 #define __INSTANTIATION
+#include <assert.h>
 #include <vector>
 #include <map>
 #include "FastEnvironment.h"
@@ -59,6 +60,14 @@ bool varFree(const VAL::parameter_symbol_list * pl);
 class instantiatedOp;
 class instantiatedDrv;
 
+template<typename S,typename V>
+class GenStore;
+
+class Literal;
+class PNE;
+
+typedef GenStore<VAL::pred_symbol,Literal> LiteralStore;
+typedef GenStore<VAL::func_symbol,PNE> PNEStore;
 
 class instantiatedDrvUtils {
 
@@ -73,8 +82,8 @@ public:
 	};
 
 private:
-	
-	struct indexLT { 
+
+	struct indexLT {
 
 		bool operator() (const index & a, const index & b) {
 			VAL::pred_symbol * afirst = VAL::current_analysis->pred_tab.symbol_get(a.first->getName());
@@ -113,7 +122,7 @@ public:
 		after = f.after;
 		return *this;
 	}
-	
+
 	virtual FlexiblePrint & operator=(const T & f) {
 		os = before;
 		os = f;
@@ -137,15 +146,38 @@ public:
 
 class PNE {
 private:
+    /** @brief A unique integer identifier for the PNE. */
 	int id;
+
+    /** @brief A unique integer identifier for non-static PNEs.
+     *
+     * If a PNE is static (never changed by any effects), its state ID is
+     * -1 - its value is not stored during search.  Otherwise, it has a
+     * unique identifier.
+     */
+    int stateID;
+
 	const VAL::func_term * func;
 	VAL::FastEnvironment * env;
 
 	const VAL::func_term * realisation;
-	
+
+protected:
+
+    friend class instantiatedOp;
+    friend class GenStore<VAL::func_symbol,PNE>;
+
+    void setID(const int & x) {
+        id = x;
+    }
+
+    void setStateID(const int & x) {
+        stateID = x;
+    }
+
 public:
-	PNE(const VAL::func_term * f,VAL::FastEnvironment * e) : 
-		id(0), func(f), env(e), realisation(0)
+	PNE(const VAL::func_term * f,VAL::FastEnvironment * e) :
+		id(0), stateID(-1), func(f), env(e), realisation(0)
 	{
 		if(varFree(func->getArgs()))
 		{
@@ -153,7 +185,7 @@ public:
 		};
 	};
 
-	const VAL::func_term * toFuncTerm() 
+	const VAL::func_term * toFuncTerm()
 	{
 		if(!realisation)
 		{
@@ -167,7 +199,7 @@ public:
 		};
 		return realisation;
 	};
-	
+
 	struct PNEParametersOutput : unary_function<const VAL::parameter_symbol *,string> {
 
 		const VAL::FastEnvironment & bindings;
@@ -178,7 +210,7 @@ public:
 			return bindings[v]->getName();
 		};
 	};
-	
+
 	void write(ostream & o) const
 	{
 		o << "(" << func->getFunction()->getName();
@@ -197,39 +229,80 @@ public:
 		return func;
 	};
 
-	VAL::LiteralParameterIterator<VAL::parameter_symbol_list::const_iterator> begin() 
+	VAL::LiteralParameterIterator<VAL::parameter_symbol_list::const_iterator> begin()
 	{return makeIterator(env,func->getArgs()->begin());};
 	VAL::LiteralParameterIterator<VAL::parameter_symbol_list::const_iterator> end()
 	{return makeIterator(env,func->getArgs()->end());};
-	const VAL::parameter_symbol * operator[](int n) 
+	const VAL::parameter_symbol * operator[](int n)
 	{
 		VAL::LiteralParameterIterator<VAL::parameter_symbol_list::const_iterator> i = begin();
 		for(;n > 0;--n,++i);
 		return *i;
 	};
-	int getID() const {return id;};
-	void setID(int x) {id = x;};
+	//int getID() const {return id;};
+	//void setID(int x) {id = x;};
+	int getStateID() const {
+        return stateID;
+    }
 
+    /** @brief @deprecated  Use <code>getGlobalID()</code> */
+    //int getID() const {
+    //    return id;
+    //}
+
+    int getGlobalID() const {
+        return id;
+    }
 };
 
 ostream & operator<<(ostream & o,const PNE & p);
 
 class Literal {
 protected:
-	int id;
+	/** @brief A unique integer identifier for the fact. */
+    int id;
+
+    /** @brief A unique integer identifier for non-static facts.
+    *
+    * If a fact is static (never changed by any effects or TILs), its state ID is
+    * -1 - its value is not stored during search.  Otherwise, it has a
+    * unique identifier.
+    */
+    int stateID;
+
 	const VAL::proposition * prop;
 	VAL::FastEnvironment * env;
 
 	const VAL::proposition * realisation;
+
+protected:
+
+    friend class instantiatedOp;
+    friend class GenStore<VAL::pred_symbol,Literal>;
+
+
+    void setID(const int & x) {
+        id = x;
+    }
+
+    void setStateID(const int & x) {
+        stateID = x;
+    }
+
 public:
-	Literal(const VAL::proposition * p, VAL::FastEnvironment * e) : 
-		id(0), prop(p), env(e), realisation(0)
+	Literal(const VAL::proposition * p, VAL::FastEnvironment * e) :
+		id(0), stateID(-1), prop(p), env(e), realisation(0)
 	{
 		if(varFree(prop->args))
 		{
 			realisation = prop;
 		};
 	};
+
+    VAL::FastEnvironment * getEnv() const
+    {
+        return env;
+    }
 
 	const VAL::proposition * toProposition()
 	{
@@ -244,7 +317,7 @@ public:
 		};
 		return realisation;
 	};
-	
+
 	struct LiteralParametersOutput {
 
 		const VAL::FastEnvironment & bindings;
@@ -255,7 +328,7 @@ public:
 			return bindings[v]->getName();
 		};
 	};
-	
+
 	void write(ostream & o) const
 	{
 		o << "(" << prop->head->getName();
@@ -274,18 +347,32 @@ public:
 		return prop;
 	};
 
-	VAL::LiteralParameterIterator<VAL::parameter_symbol_list::iterator> begin() 
+	VAL::LiteralParameterIterator<VAL::parameter_symbol_list::iterator> begin()
 	{return makeIterator(env,prop->args->begin());};
 	VAL::LiteralParameterIterator<VAL::parameter_symbol_list::iterator> end()
 	{return makeIterator(env,prop->args->end());};
-	VAL::parameter_symbol * operator[](int n) 
+	VAL::parameter_symbol * operator[](int n)
 	{
 		VAL::LiteralParameterIterator<VAL::parameter_symbol_list::iterator> i = begin();
 		for(;n > 0;--n,++i);
 		return *i;
 	};
-	int getID() const {return id;};
-	void setID(int x) {id = x;};
+//	int getID() const {return id;};
+//	void setID(int x) {id = x;};
+
+	int getGlobalID() const {
+        return id;
+    }
+
+    /** @brief @deprecated  Use <code>getGlobalID()</code> */
+    //int getID() const {
+    //    return id;
+    //}
+
+
+    int getStateID() const {
+        return stateID;
+    }
 	virtual ~Literal() {};
 };
 
@@ -294,7 +381,7 @@ struct CreatedLiteral : public Literal {
 	CreatedLiteral(const VAL::proposition * p, VAL::FastEnvironment * e) :
 		Literal(p,e)
 	{};
-	
+
 	~CreatedLiteral()
 	{
 		delete env;
@@ -351,8 +438,20 @@ private:
 
 	Purifier<S> purify;
 
+	bool locked;
+
 public:
-	
+
+    GenStore()
+        : locked(false)
+    {
+    }
+
+    void preventFurtherModification()
+    {
+        locked = true;
+    }
+
 	void write(ostream & o) const
 	{
 		for(typename deque<V*>::const_iterator i = allLits.begin();i != allLits.end();++i)
@@ -363,6 +462,7 @@ public:
 
 	V * insert(V * lit)
 	{
+        assert(!locked);
 		V * & str = literals[purify(lit->getHead())].forceGet(lit->begin(),lit->end());
 
 		if(str == 0)
@@ -374,7 +474,7 @@ public:
 		}
 		return str;
 	};
-	
+
 	V * find(V * lit)
 	{
 		V * & str = literals[purify(lit->getHead())].myGet(lit->begin(),lit->end());
@@ -414,7 +514,7 @@ public:
 	{
 		return literals[purify(s)].myGet(b,e);
 	};
-	
+
 	void erase(const V * v)
 	{
 		literals[purify(v->getHead())].myGet(v->begin(),v->end()) = 0;
@@ -425,21 +525,18 @@ public:
 	{
 		allLits.erase(std::remove(allLits.begin(),allLits.end(),((V*)0)),allLits.end());
 	}
-        
+
         void clear()
         {
             iterator itr = begin();
             const iterator itrEnd = end();
-            
+
             for (; itr != itrEnd; ++itr) delete *itr;
-            
+
             literals.clear();
             allLits.clear();
         }
 };
-
-typedef GenStore<VAL::pred_symbol,Literal> LiteralStore;
-typedef GenStore<VAL::func_symbol,PNE> PNEStore;
 
 class instantiatedOp;
 class instantiatedDrv;
@@ -451,7 +548,7 @@ class LitStoreEvaluator : public PrimitiveEvaluator {
 private:
 	LiteralStore & literals;
 public:
-	LitStoreEvaluator(bool & v,bool & u,bool & w,bool & x,LiteralStore & lits) : 
+	LitStoreEvaluator(bool & v,bool & u,bool & w,bool & x,LiteralStore & lits) :
 		PrimitiveEvaluator(v,u,w,x), literals(lits) {};
 
 	virtual void evaluateSimpleGoal(VAL::FastEnvironment * f,VAL::simple_goal * s);
@@ -462,9 +559,9 @@ class PrimitiveEvaluatorConstructor<LitStoreEvaluator> {
 private:
 	LiteralStore & literals;
 public:
-	PrimitiveEvaluatorConstructor<LitStoreEvaluator>(LiteralStore & lits) : 
+	PrimitiveEvaluatorConstructor<LitStoreEvaluator>(LiteralStore & lits) :
 		literals(lits) {};
-	PrimitiveEvaluator * operator()(bool & v,bool & u,bool & w,bool & x) 
+	PrimitiveEvaluator * operator()(bool & v,bool & u,bool & w,bool & x)
 	{
 		return new LitStoreEvaluator(v,u,w,x,literals);
 	}
@@ -496,37 +593,91 @@ private:
 	static LiteralStore & literals;
 	static PNEStore & pnes;
 
+    static int nonStaticLiteralCount;
+    static int nonStaticPNECount;
+
+    static bool staticFactsAndLiteralsHaveBeenGivenIDs;
 public:
+
+    #ifndef NDEBUG
+    static const VAL::operator_ * insistOnOp;
+    static vector<VAL::const_symbol *> insistOnOpParameters;
+    static const instantiatedOp * opBeforeFiltering;
+    #endif
+
 	instantiatedOp(const VAL::operator_ * o,VAL::FastEnvironment * e) : id(0), op(o), env(e) {};
 	static void instantiate(const VAL::operator_ * op, const VAL::problem * p,VAL::TypeChecker & tc);
 	~instantiatedOp() {delete env;};
 
-	static void filterOps(VAL::TypeChecker * const);
-	static void opErase(const instantiatedOp * o)
-	{
-		instOps.erase(o);
-	}
-	
-	void write(ostream & o) const 
+    /** @brief  Erase any ground operators whose preconditions are trivially unreachable. */
+    static void filterOps(VAL::TypeChecker * const);
+
+    /** @brief  Assign unique identifiers to non-static literals and PNEs.
+     *
+     * @see Literal::stateID , PNE::stateID
+     */
+    static void assignStateIDsToNonStaticLiteralsAndPNEs();
+
+    /** @brief  Erase the given instantiated operator. */
+    static void opErase(const instantiatedOp * o) {
+        instOps.erase(o);
+    }
+
+	/** @brief  Print the name of the instantiated operator.
+     *
+     *  The printed name is of the form <code>(operatorname param1 param2 param3)</code>, and is
+     *  suitable for inclusion in plans to be parsed by the validator.
+     */
+	void write(ostream & o) const
 	{
 		o << "(" << op->name->getName();
 		transform(op->parameters->begin(),op->parameters->end(),
 					FlexiblePrint<string>(o," ",""),ActionParametersOutput(*env));
 		o << ")";
 	};
+
+    /** @brief  Return the number of parameters of the operator. */
 	int arity() const {return op->parameters->size();};
 
+    /** @brief  Return the object used as the ith parameter of this instantiated operator. */
 	const VAL::const_symbol * getArg(int i) const
 	{
 		VAL::var_symbol_list::const_iterator a = op->parameters->begin();
 		for(;i > 0;--i,++a);
 		return (*env)[*a];
 	};
-	static void writeAll(ostream & o);
-	static int howMany() {return instOps.size();};
-	static int howManyLiterals() {return literals.size();};
-	static int howManyPNEs() {return pnes.size();};
 
+    /** @brief  Print the names of all the instantiated operators. */
+	static void writeAll(ostream & o);
+
+    /** @brief  Return the number of instantiated operators. */
+	static int howMany() {return instOps.size();};
+
+    /** @brief  Return the number of ground <code>Literal</code>s (including static literals). */
+    static int howManyLiteralsOfAnySort() { return literals.size(); }
+
+    /** @brief  Return the number of ground non-static <code>Literal</code>s.
+     *
+     * This function should only be called after a call to
+     * <code>instantiatedOp::assignStateIDsToNonStaticLiteralssAndPNEs()</code> has been made.
+     */
+    static int howManyNonStaticLiterals() {
+        assert(staticFactsAndLiteralsHaveBeenGivenIDs);
+        return nonStaticLiteralCount;
+    }
+
+    /** @brief  Return the number of ground <code>PNE</code>s (including static PNEs). */
+    static int howManyPNEsOfAnySort() { return pnes.size(); }
+
+    /** @brief  Return the number of ground non-static <code>PNE</code>s.
+     *
+     * This function should only be called after a call to
+     * <code>instantiatedOp::assignStateIDsToNonStaticLiteralssAndPNEs()</code> has been made.
+     */
+    static int howManyNonStaticPNEs() {
+        assert(staticFactsAndLiteralsHaveBeenGivenIDs);
+        return nonStaticPNECount;
+    }
 	static void createAllLiterals(VAL::problem * p,VAL::TypeChecker * tc);
 	void collectLiterals(VAL::TypeChecker * tc);
 	static void writeAllLiterals(ostream & o);
@@ -559,7 +710,7 @@ public:
 	template<typename TI>
 	static instantiatedOp * getInstOp(const string & opname,TI sp,TI ep)
 	{
-		VAL::operator_symbol * osym(VAL::current_analysis->op_tab.symbol_get(opname));		
+		VAL::operator_symbol * osym(VAL::current_analysis->op_tab.symbol_get(opname));
 		return getInstOp(osym,sp,ep);
 	};
 	template<typename TI>
@@ -572,6 +723,11 @@ public:
 	VAL::FastEnvironment * getEnv() {return env;};
 	static Literal * getLiteral(Literal * l) {return literals.insert(l);};
 	static Literal * findLiteral(Literal * l) {return literals.find(l);};
+    static void preventFurtherModificationOfLiterals()
+    {
+        literals.preventFurtherModification();
+    }
+
 	static PNE * getPNE(PNE * p) {return pnes.insert(p);};
 	static PNE * findPNE(PNE * p) {return pnes.find(p);};
 
@@ -640,7 +796,7 @@ public:
 		VAL::pc_list<VAL::timed_effect*>::iterator efftsend;
 		PNE * pne;
 	public:
-		PNEEffectsIterator(instantiatedOp * io) : inst(io), 
+		PNEEffectsIterator(instantiatedOp * io) : inst(io),
 			effs(io->op->effects->assign_effects.begin()),
 			effsend(io->op->effects->assign_effects.end()),
 			effts(io->op->effects->timed_effects.begin()),
@@ -685,7 +841,7 @@ public:
 		PNEEffectsIterator & operator++()
 		{
 			++effs;
-			if(effs == effsend && effts != efftsend) 
+			if(effs == effsend && effts != efftsend)
 			{
 				effs = (*effts)->effs->assign_effects.begin();
 				//cout << "GOT " << **effs << "\n";
@@ -701,7 +857,7 @@ public:
 		{
 			return (*effs)->getExpr();
 		};
-		const VAL::assign_op getOp() const 
+		const VAL::assign_op getOp() const
 		{
 			return (*effs)->getOp();
 		};
@@ -767,8 +923,8 @@ public:
 	{
 		instDrvs.erase(o);
 	}
-	
-	void write(ostream & o) const 
+
+	void write(ostream & o) const
 	{
 		o << "(derive-" << op->get_head()->head->getName() << "-" << op;
 		transform(op->get_head()->args->begin(),op->get_head()->args->end(),
@@ -810,7 +966,7 @@ public:
 	template<typename TI>
 	static instantiatedOp * getInstDrv(const string & opname,TI sp,TI ep)
 	{
-		VAL::pred_symbol * osym(VAL::current_analysis->pred_tab.symbol_get(opname));		
+		VAL::pred_symbol * osym(VAL::current_analysis->pred_tab.symbol_get(opname));
 		return getInstDrv(osym,sp,ep);
 	};
 	static DrvStore::iterator from(int k) {return drvsBegin()+k;};
@@ -818,7 +974,7 @@ public:
 	VAL::FastEnvironment * getEnv() {return env;};
 
 	//const VAL::pred_symbol * getHead() const {return op->get_head()->head;};
-	
+
 	const instantiatedDrvUtils::index * getHead() const {return &localHead; };
 
 	int getID() const {return id;};
@@ -850,12 +1006,12 @@ private:
 	I myIt;
 public:
 	Iterator(I i) : myIt(i) {};
-	Iterator & operator++() 
+	Iterator & operator++()
 	{
 		++myIt;
 		return *this;
 	};
-	V operator*() 
+	V operator*()
 	{
 		return f(*myIt);
 	};

@@ -70,6 +70,9 @@ using std::make_pair;
 
 namespace VAL {
 
+  bool stepLengthDefault;
+  bool makespanDefault;
+
 string getName(plan_step* ps)
 {
   string actionName = ps->op_sym->getName();
@@ -119,7 +122,7 @@ DerivationRules::DerivationRules(const derivations_list * d,const operator_list 
 
 	for(pc_list<derivation_rule *>::const_iterator i = d->begin(); i != d->end();++i)
 	{
-    
+
 
      map<string,pair<const goal *,const var_symbol_table *> >::iterator dp = derivPreds.find((*i)->get_head()->head->getName());
 	  if(dp != derivPreds.end())
@@ -132,12 +135,12 @@ DerivationRules::DerivationRules(const derivations_list * d,const operator_list 
    			DerivedPredicateError dpe;
    			throw dpe;
           };
-                  
+
            //change variables  of second dp to match that of the first
           //parameter_symbol_list::const_iterator k = dp->second.second->begin();
           map<string,var_symbol*>::const_iterator k = dp->second.second->begin();
           map<parameter_symbol*,parameter_symbol*> newvars;
-          
+
           for(parameter_symbol_list::iterator j = (*i)->get_head()->args->begin(); j != (*i)->get_head()->args->end();++j)
    	    {
             if(dynamic_cast<const var_symbol *>(*j))
@@ -146,16 +149,16 @@ DerivationRules::DerivationRules(const derivations_list * d,const operator_list 
             };
               k++;
    	    };
-             
+
          goal * agoal = const_cast<goal*>(dp->second.first);
          goal * bgoal = (*i)->get_body();
          changeVars(bgoal,newvars);
-          
+
          goal_list * gl = new goal_list();
    		//gl->push_back((*i)->get_body());
    		gl->push_back(agoal);
          gl->push_back(bgoal);
-         
+
    		const disj_goal * dg = new disj_goal(gl);  repeatedDPDisjs.push_back(dg);
 
           for(pc_list<derivation_rule *>::iterator h = drvs->begin(); h != drvs->end();++h)
@@ -164,7 +167,7 @@ DerivationRules::DerivationRules(const derivations_list * d,const operator_list 
           };
          derivPreds[dp->first] = make_pair(dg,dp->second.second);
 
-        
+
 	  }
     else
     {
@@ -186,36 +189,36 @@ DerivationRules::DerivationRules(const derivations_list * d,const operator_list 
    	  };
 
 
-      
+
          drvs->push_back(*i);
    		derivPreds[(*i)->get_head()->head->getName()] = make_pair((*i)->get_body(),vst);
 
     };
-	
-	};	
+
+	};
 };
 
 //this changes the bindings of a DP to match the bindings of its disjuctive counterpart as given by the map
 void changeVars(goal * g,map<parameter_symbol*,parameter_symbol*> varMap)
 {
-           
+
   if(dynamic_cast<const comparison*>(g))
 	{
       const comparison * comp = dynamic_cast<const comparison*>(g);
 		changeVars(const_cast<expression*>(comp->getLHS()),varMap);
       changeVars(const_cast<expression*>(comp->getRHS()),varMap);
 	};
-         
+
 	if(dynamic_cast<const conj_goal *>(g))
 	{
         const conj_goal * cg = dynamic_cast<const conj_goal *>(g);
 
-        
+
         for(pc_list<goal*>::const_iterator i = cg->getGoals()->begin(); i != cg->getGoals()->end(); ++i)
-			{        
+			{
 				changeVars(*i,varMap);
 			};
-			
+
 	};
 
 
@@ -227,9 +230,9 @@ void changeVars(goal * g,map<parameter_symbol*,parameter_symbol*> varMap)
 			{
 				changeVars(*i,varMap);
 			};
-	
+
 	};
-       
+
 	if(dynamic_cast<const neg_goal *>(g))
 	{
 		changeVars(const_cast<goal*>(dynamic_cast<const neg_goal *>(g)->getGoal()),varMap);
@@ -254,18 +257,18 @@ void changeVars(goal * g,map<parameter_symbol*,parameter_symbol*> varMap)
    		  {
                // *i = varMap[const_cast<var_symbol*>(dynamic_cast<const var_symbol *>(*i))];
                  map<parameter_symbol*,parameter_symbol*>::const_iterator nv = varMap.find(const_cast<parameter_symbol*>(*i));
-                if( nv != varMap.end()) *i = nv->second;    
+                if( nv != varMap.end()) *i = nv->second;
            };
          };
   };
-		
+
 
 	if(dynamic_cast<const qfied_goal*>(g))
 	{
       changeVars(const_cast<goal*>(dynamic_cast<const qfied_goal*>(g)->getGoal()),varMap);
 	};
 
-	      
+
 };
 
 void changeVars(expression * e,map<parameter_symbol*,parameter_symbol*> varMap)
@@ -283,21 +286,21 @@ void changeVars(expression * e,map<parameter_symbol*,parameter_symbol*> varMap)
       const uminus_expression * ue = dynamic_cast<const uminus_expression*>(e);
 
 
-		changeVars(const_cast<expression*>(ue->getExpr()),varMap);    
+		changeVars(const_cast<expression*>(ue->getExpr()),varMap);
 	};
 
     if(dynamic_cast<const func_term*>(e))
 	{
       const func_term * fe = dynamic_cast<const func_term*>(e);
       parameter_symbol_list *param_list =   const_cast<parameter_symbol_list*>(fe->getArgs());
-      
+
       for(parameter_symbol_list::iterator i = param_list->begin(); i != param_list->end();++i)
    	  {
         if(dynamic_cast<const var_symbol *>(*i))
    		  {
                 //*i = varMap[const_cast<parameter_symbol*>(*i)];
                  map<parameter_symbol*,parameter_symbol*>::const_iterator nv = varMap.find(const_cast<parameter_symbol*>(*i));
-                if( nv != varMap.end()) *i = nv->second;  
+                if( nv != varMap.end()) *i = nv->second;
            };
          };
 	};
@@ -305,7 +308,7 @@ void changeVars(expression * e,map<parameter_symbol*,parameter_symbol*> varMap)
 
 bool DerivationRules::stratification() const
 {
-	
+
 	map<pair<derivation_rule *,derivation_rule *>, unsigned int> analyseDPs;
 	//order DPs
 	for(pc_list<derivation_rule *>::const_iterator i = drvs->begin(); i != drvs->end();++i)
@@ -317,18 +320,18 @@ bool DerivationRules::stratification() const
 			analyseDPs[make_pair(*i,*j)] = 0;
 		};
 	};
-             
+
 	for(pc_list<derivation_rule *>::const_iterator j = drvs->begin(); j != drvs->end();++j)
-	{          
+	{
 		for(pc_list<derivation_rule *>::const_iterator i = drvs->begin(); i != drvs->end();++i)
 		{
 			unsigned int ijoccurNNF = occurNNF(*i,*j); //i appears in j?
-			      
+
 			if( ijoccurNNF == 2 )
 				analyseDPs[make_pair(*i,*j)] = 2;
 			else if( ijoccurNNF == 1 )
 				{
-					if(analyseDPs[make_pair(*i,*j)] < 1) analyseDPs[make_pair(*i,*j)] = 1; 
+					if(analyseDPs[make_pair(*i,*j)] < 1) analyseDPs[make_pair(*i,*j)] = 1;
 				};
 		};
 	};
@@ -348,14 +351,14 @@ bool DerivationRules::stratification() const
 						maxijjk = analyseDPs[make_pair(*j,*k)];
 
 					if(maxijjk > analyseDPs[make_pair(*i,*k)] ) analyseDPs[make_pair(*i,*k)]  = maxijjk;
-				}; 
+				};
 			};
 
 
 
 		};
 	};
- 
+
 	//check DPs can be stratified
 	for(pc_list<derivation_rule *>::const_iterator i = drvs->begin(); i != drvs->end();++i)
 	{
@@ -366,16 +369,16 @@ bool DerivationRules::stratification() const
 
 	if(!Verbose || drvs->size() == 0) return true;
 
-	
+
 	//extract stratification
 
 	vector< pair<unsigned int,vector<string> > > stratification;
 
 	unsigned int level = 1;
 	map< derivation_rule *, unsigned int> remaining;
-	
 
-	
+
+
 	for(pc_list<derivation_rule *>::const_iterator i = drvs->begin(); i != drvs->end();++i)
 	{
 		remaining[*i] = 1;
@@ -386,14 +389,14 @@ bool DerivationRules::stratification() const
 		vector<string> stratum;
 		bool stratfin = true;
 		vector< derivation_rule *> toRemove;
-		
+
 		for(map< derivation_rule *, unsigned int>::const_iterator i = remaining.begin(); i != remaining.end();++i)
 		{
 			if(remaining[i->first] == 1) {stratfin = false; break;};
 		};
-		
+
 		if(stratfin) break;
-		
+
 		for(map< derivation_rule *, unsigned int>::const_iterator j = remaining.begin(); j != remaining.end();++j)
 		{
 			if(remaining[j->first] == 1)
@@ -402,7 +405,7 @@ bool DerivationRules::stratification() const
 				bool ijr2 = true;
 				for(map< derivation_rule *, unsigned int>::const_iterator i = remaining.begin(); i != remaining.end();++i)
 				{
-					if(remaining[i->first] == 1 && analyseDPs[make_pair(i->first,j->first)] == 2) ijr2 = false; 
+					if(remaining[i->first] == 1 && analyseDPs[make_pair(i->first,j->first)] == 2) ijr2 = false;
 
 				};
 
@@ -417,7 +420,7 @@ bool DerivationRules::stratification() const
 		};
 
 		for(vector<derivation_rule *>::const_iterator k = toRemove.begin(); k != toRemove.end(); ++k) remaining[*k] = 0;
-	
+
 		stratification.push_back(make_pair(level,stratum));
 
 
@@ -439,7 +442,7 @@ bool DerivationRules::stratification() const
 				*report << *s;
 				if( s+1 != i->second.end() ) *report <<", ";
 			};
-      
+
           if( ++i != stratification.end()) *report << "\\\\";
 			*report << "\n";
 
@@ -467,7 +470,7 @@ bool DerivationRules::stratification() const
 
 
 	};
-	
+
 	return true;
 };
 
@@ -477,26 +480,26 @@ unsigned int DerivationRules::occurNNF(derivation_rule * drv1,derivation_rule * 
 {
 	const goal * g = NNF(new goal(*drv2->get_body()));
 
-	
+
    bool ans = occur(drv1->get_head()->head->getName(),g);
    delete g;
-   
+
 	return  ans;
 };
 
 //0 = does not appear, 2 = appears negatively, 1 = appears positively (as an atom within formula)
 unsigned int DerivationRules::occur(string s,const goal * g) const
 {
-    
+
 	if(dynamic_cast<const comparison*>(g))
 	{
 		return 0;
 	};
-	
+
 	if(dynamic_cast<const conj_goal *>(g))
 
 	{
-	 
+
 		const conj_goal * cg = dynamic_cast<const conj_goal *>(g);
 
 
@@ -505,15 +508,15 @@ unsigned int DerivationRules::occur(string s,const goal * g) const
 		{
 			unsigned int occ = occur(s,*i);
 			if(occ > ans) ans = occ;
-			if(ans == 2) break;  
+			if(ans == 2) break;
 		};
-		
+
 		return ans;
 	};
 
 	if(dynamic_cast<const disj_goal*>(g))
 	{
-	 
+
 		const disj_goal * dg = dynamic_cast<const disj_goal*>(g);
 
 		unsigned int ans = 0;
@@ -523,9 +526,9 @@ unsigned int DerivationRules::occur(string s,const goal * g) const
 
 			unsigned int occ = occur(s,*i);
 			if(occ > ans) ans = occ;
-			if(ans == 2) break;  
+			if(ans == 2) break;
 		};
-		
+
 		return ans;
 	};
 
@@ -536,7 +539,7 @@ unsigned int DerivationRules::occur(string s,const goal * g) const
 
 		if(dynamic_cast<const simple_goal*>(ng->getGoal()) && occur(s,ng->getGoal()) == 1)
 			return 2;
-		 
+
 
 
 
@@ -549,7 +552,7 @@ unsigned int DerivationRules::occur(string s,const goal * g) const
 	if(dynamic_cast<const imply_goal*>(g))
 	{
 		const imply_goal * ig = dynamic_cast<const imply_goal*>(g);
-		
+
 
 		neg_goal * ng = new neg_goal(const_cast<goal *>(ig->getAntecedent()));
 		goal_list * gl = new goal_list();
@@ -577,24 +580,24 @@ unsigned int DerivationRules::occur(string s,const goal * g) const
 				}
 				else
 					return 2;
-			};	
+			};
 		};
-		
-		return 0;	
+
+		return 0;
 	};
 
-	
+
 	if(dynamic_cast<const qfied_goal*>(g))
 	{
 		const qfied_goal * qg = dynamic_cast<const qfied_goal*>(g);
 
-		
+
 		return occur(s,qg->getGoal());
 
 
 
 	};
-	
+
 
 	return 0;
 
@@ -610,58 +613,58 @@ const goal * DerivationRules::NNF(const goal * gl) const
 
 	if(dynamic_cast<const neg_goal *>(g))
 	{
-	
+
 		const goal * ng = (dynamic_cast<const neg_goal *>(g))->getGoal();
 
 		if(dynamic_cast<const conj_goal *>(ng))
 		{
-		 
+
 
 			const conj_goal * cg = dynamic_cast<const conj_goal *>(ng);
 
 
 			goal_list * gl = new goal_list();
-			
+
 			for(pc_list<goal*>::const_iterator i = cg->getGoals()->begin(); i != cg->getGoals()->end(); ++i)
 			{
 				goal * agoal = const_cast<goal *>(NNF(new neg_goal(new goal(*const_cast<goal*>(*i)))));
 				gl->push_back(agoal);
 			};
-			
+
 			return new disj_goal(gl);
 		};
 
 		if(dynamic_cast<const disj_goal*>(ng))
 		{
 
-		 
+
 			const disj_goal * dg = dynamic_cast<const disj_goal*>(ng);
 
 			goal_list * gl = new goal_list();
-			
+
 			for(pc_list<goal*>::const_iterator i = dg->getGoals()->begin(); i != dg->getGoals()->end(); ++i)
 			{
 				goal * agoal = const_cast<goal *>(NNF(new neg_goal(new goal(*const_cast<goal*>(*i)))));
 				gl->push_back(agoal);
 
 			};
-			
+
 			return new conj_goal(gl);
 		};
 
 		if(dynamic_cast<const neg_goal *>(ng))
 		{
 			const neg_goal * nng = dynamic_cast<const neg_goal *>(ng);
- 
+
 			return NNF(nng->getGoal());
 		};
 
 
-		
+
 		if(dynamic_cast<const imply_goal*>(ng))
 		{
 			const imply_goal * ig = dynamic_cast<const imply_goal*>(ng);
-			
+
 			neg_goal * nng = new neg_goal(const_cast<goal *>(ig->getConsequent()));
 			goal_list * gl = new goal_list();
 			goal * agoal = new goal(*const_cast<goal *>(ig->getAntecedent()));
@@ -677,12 +680,12 @@ const goal * DerivationRules::NNF(const goal * gl) const
 
 
 		if(dynamic_cast<const simple_goal*>(ng))
-		{	
-			return new goal(*g);	
+		{
+			return new goal(*g);
 
 		};
 
-		
+
 		if(dynamic_cast<const qfied_goal*>(ng))
 		{
 			const qfied_goal * qg = dynamic_cast<const qfied_goal*>(ng);
@@ -699,7 +702,7 @@ const goal * DerivationRules::NNF(const goal * gl) const
 				ans = new qfied_goal(E_EXISTS,new var_symbol_list(*const_cast<var_symbol_list*>(qg->getVars())),
 							const_cast<goal*>(NNF(new neg_goal(const_cast<goal*>(qg->getGoal())))),
 							new var_symbol_table(*const_cast<var_symbol_table*>(qg->getSymTab())));
-			
+
 
 			return ans;
 
@@ -715,7 +718,7 @@ const goal * DerivationRules::NNF(const goal * gl) const
 
 
 		const imply_goal * ig = dynamic_cast<const imply_goal*>(g);
-		
+
 		neg_goal * ng = new neg_goal(const_cast<goal *>(ig->getAntecedent()));
 		goal_list * gl = new goal_list();;
 		goal * agoal = new goal(*const_cast<goal *>(ig->getConsequent()));
@@ -727,36 +730,36 @@ const goal * DerivationRules::NNF(const goal * gl) const
 	};
 
 	if(dynamic_cast<const conj_goal *>(g))
-	{	 
+	{
 
 
 		const conj_goal * cg = dynamic_cast<const conj_goal *>(g);
 
 
 		goal_list * gl = new goal_list();
-		
+
 		for(pc_list<goal*>::const_iterator i = cg->getGoals()->begin(); i != cg->getGoals()->end(); ++i)
-		{	
+		{
 			gl->push_back(const_cast<goal*>(NNF(*i)));
 		};
-		
+
 		return new conj_goal(gl);
 	};
-		
+
 
 	if(dynamic_cast<const disj_goal*>(g))
 	{
-		 
+
 		const disj_goal * dg = dynamic_cast<const disj_goal*>(g);
 
 
 		goal_list * gl = new goal_list();
-		
+
 		for(pc_list<goal*>::const_iterator i = dg->getGoals()->begin(); i != dg->getGoals()->end(); ++i)
 		{
 				gl->push_back(new goal(*const_cast<goal*>(NNF(*i))));
 		};
-		
+
 		return new disj_goal(gl);
 	};
 
@@ -777,17 +780,17 @@ const goal * DerivationRules::NNF(const goal * gl) const
 			ans = new qfied_goal(E_FORALL,new var_symbol_list(*const_cast<var_symbol_list*>(qg->getVars())),
 						const_cast<goal*>(NNF(const_cast<goal*>(qg->getGoal()))),
 		 				new var_symbol_table(*const_cast<var_symbol_table*>(qg->getSymTab())));
-		
+
 		return ans;
 
 
 	};
 
 	if(dynamic_cast<const simple_goal*>(g))
-	{	
+	{
 		return new goal (*g);
 	};
-	
+
 	return g;
 };
 
@@ -799,8 +802,8 @@ bool DerivationRules::isDerivedPred(string s) const
 	map<string,pair<const goal *,const var_symbol_table *> >::const_iterator i = derivPreds.find(s);
 
 	if(i  != derivPreds.end())  ans = true;
- 
-	return ans;	
+
+	return ans;
 };
 
 
@@ -835,7 +838,7 @@ bool DerivationRules::effects(const effect_lists* efflist) const
 	return true;
 
 };
-	
+
 bool DerivationRules::effects() const
 {
   //check that derived predicates are not used in effects
@@ -871,27 +874,27 @@ bool DerivationRules::effects() const
 
 
    };
-   
-  return true; 
+
+  return true;
 };
 
 
 DerivationRules::~DerivationRules()
 {
- 
+
   drvs->clear(); delete drvs;
 
   for(map<string,pair<const goal *,const var_symbol_table *> >::iterator i = derivPreds.begin(); i != derivPreds.end(); ++i)
   {
         delete i->second.second;
   };
-   
+
   for(vector<const disj_goal *>::iterator j = repeatedDPDisjs.begin(); j != repeatedDPDisjs.end(); ++j)
   {
         const_cast<goal_list*>((*j)->getGoals())->clear();
         delete (*j);
   };
-  
+
 };
 
 
@@ -909,16 +912,16 @@ Validator::~Validator()
 
         delete j->second;
      };
-        
+
 	graphs.clear();
 
-	
+
 	Environment::collect(this);
 	delete finalInterestingState;
 };
 
 bool DerivationRules::checkDerivedPredicates() const
-{        
+{
 	if(!effects())
 	{
 
@@ -929,7 +932,7 @@ bool DerivationRules::checkDerivedPredicates() const
 	};
 
 
-    
+
 	if(!stratification())
 
 
@@ -941,7 +944,7 @@ bool DerivationRules::checkDerivedPredicates() const
 
 
 	};
-         
+
 	return true;
 };
 
@@ -962,7 +965,7 @@ Gantt::~Gantt()
           delete j->second;
          };
     };
-  
+
 
 };
 
@@ -995,26 +998,26 @@ bool Validator::execute()
   isOK = events.triggerInitialEvents(this,thisStep.getTime());
 
 
-     
-  //main loop of plan execution     
+
+  //main loop of plan execution
 	while(thisStep != theplan.end())
 	{
 			if(LaTeX) *report << "\\\\\n";
       else if(Verbose) cout << "\n";
-      
+
 			if(isOK || ContinueAnyway)
 			{
         		isReg = (*thisStep)->isRegularHappening();
 
         		if(isReg && events.hasEvents()) events.updateEventsForMutexCheck(this);
-        
+
 // Might need to modify this compound test if we want to identify repair
-// strategies for later parts of a failed plan, since this appears to 
+// strategies for later parts of a failed plan, since this appears to
 // shortcircuit the state progression when trajectory constraints fail
 				isOK = tjm.checkAtState(state) && isOK;
 				isOK = state.progress(*(thisStep)) && isOK;
-             
-        		if(isReg && events.hasEvents() && (isOK || ContinueAnyway)) 
+
+        		if(isReg && events.hasEvents() && (isOK || ContinueAnyway))
         			isOK = events.triggerEventsOnInterval(this,false) && isOK;
 
        			thisStep++;
@@ -1053,10 +1056,10 @@ double Validator::getNextHappeningTime() const
 
     if(aStep != theplan.end())
     {
-      return aStep.getTime();      
+      return aStep.getTime();
     }
- 
-      return 0; 
+
+      return 0;
 };
 
 double Validator::getCurrentHappeningTime() const
@@ -1070,7 +1073,7 @@ bool Validator::isLastHappening() const
 {
     Plan::const_iterator aStep = thisStep;
     aStep++;
- 
+
     return (aStep == theplan.end());
 };
 
@@ -1078,7 +1081,7 @@ bool Validator::isLastHappening() const
 bool Validator::executeHappening(const Happening * h)
 {
    if(LaTeX) *report << "\\\\\n ";
-   return state.progress(h);  
+   return state.progress(h);
 };
 
 bool Validator::executeHappeningCtsEvent(const Happening * h)
@@ -1088,7 +1091,7 @@ bool Validator::executeHappeningCtsEvent(const Happening * h)
 
    return state.progressCtsEvent(h);
 };
-	
+
 void Validator::displayPlan() const
 {
 	try
@@ -1109,15 +1112,15 @@ void Validator::displayPlan() const
 
 struct comparePS {
 
-	
+
 	comparePS() {};
-	
+
 	bool operator()(plan_step * ps1,plan_step * ps2) const
 	{
-	
+
 		if(ps1->start_time < ps2->start_time) return true;
 
-	
+
 		return false;
 	};
 };
@@ -1132,16 +1135,16 @@ void Validator::displayInitPlanLaTeX(const plan * p) const
 
 
 	string act,r;
-	
+
 	for(pc_list<plan_step*>::const_iterator i = p->begin(); i != p->end() ; ++i)
 	{
 		if(!((*i)->start_time_given)) (*i)->start_time = ++countNoTimeStamp;
 		vps.push_back(*i);
 	};
-	
-	
+
+
 	std::sort(vps.begin(),vps.end(),comparePS());
-	
+
 	*report << "Plan size: " << vps.size();
    if(p->getTime() >= 0) *report << "\\\\Planner run time: "<< p->getTime();
 
@@ -1150,33 +1153,33 @@ void Validator::displayInitPlanLaTeX(const plan * p) const
    *report <<"\n";
 	*report << "\\begin{tabbing}\n";
 	*report << "\\headingtimeaction \n";
-	
+
 	for(vector<plan_step*>::const_iterator i1 = vps.begin(); i1 != vps.end() ; ++i1)
-	{ 
+	{
 		*report << "\\atime{"<<(*i1)->start_time << "}";
 
 		act = " \\> \\listrow{\\action{("+(*i1)->op_sym->getName();
-		
+
 		for(typed_symbol_list<const_symbol>::const_iterator j = (*i1)->params->begin();
 				j != (*i1)->params->end(); ++j)
 		{
-			
+
 			act += " " + (*j)->getName();
 
 
 		};
 
 		latexString(act);
-		
+
 
 
 
 		*report << act << ")";
-		
+
 		if((*i1)->duration_given) *report << " ["<<(*i1)->duration<<"]";
 		*report << "}}\\\\\n";
 	};
-	
+
 
 	*report << "\\end{tabbing}\n";
 
@@ -1230,7 +1233,7 @@ void Validator::displayInvariantWarnings() const
 	{
 		*report << *i <<"\n";
 
-	}; 
+	};
 
 
 };
@@ -1240,13 +1243,15 @@ bool Validator::checkGoal(const goal * g)
 	if(!g) return true;
 	const Proposition * p = pf.buildProposition(g);
   //cout << "no of events = "; events.displaynoevents(); //for testing
+  //cout << "Checking " << *p << " in " << state << " and getting " << p->evaluate(&state) << "\n";
+	DerivedGoal::resetLists(&state);
 	bool b = p->evaluate(&state) && tjm.checkFinalState(state);
     if(!b && (Verbose || ErrorReport))
     {
       errorLog.addGoal(p,&state);
       return b;
     }
-    else 
+    else
     {
 		if(followUp != theplan.end())
 		{
@@ -1282,13 +1287,13 @@ bool Validator::checkGoal(const goal * g)
 
 			Verbose = v;
 			LaTeX = ltx; */
-		}; 
-        
-    	
+		};
+
+
     };
 
   p->destroy();
-      
+
 	return b;
 };
 
@@ -1304,44 +1309,78 @@ int Validator::simpleLength() const
 {
 	if(stepLength) return stepcount;  // Default is step count.
 
-	return theplan.length();	
+	return theplan.length();
 
 };
 
-double Validator::finalValue() const
 
+void Validator::computeMetric(const State * s,vector<double> & v) const
 {
-	double value;
 	static Environment nullEnv;
+	pc_list<expression *>::const_iterator j = metric->expr->begin();
+	for(unsigned int i = 0;i < v.size();++i,++j)
+	{
+		v[i] = s->evaluate(*j,nullEnv);
+	}
+};
+
+vector<double> Validator::finalValue() const
+{
+	vector<double> value(metric?metric->opt.size():1);
+	bool doneSL = false;
+
 	if(metric && !(makespanDefault && durative))
 	{
-		if(finalInterestingState) 
-			return finalInterestingState->evaluate(metric->expr,nullEnv);
-		value = state.evaluate(metric->expr,nullEnv);
+		if(finalInterestingState)
+		{
+			computeMetric(finalInterestingState,value);
+			return value;
+		}
+		computeMetric(&state,value);
 	}
-	else if(durative && makespanDefault) 
+	else if(durative && makespanDefault)
 	{
-		value = maxTime;
+
+		value[0] = theplan.lastHappening()->getTime();
 	}
-	else if(stepLength) 
+	else if(stepLength)
 	{
-		value = stepcount;  // Default is step count.
+		value[0] = stepcount;  // Default is step count.
+		doneSL = true;
 	}
-	else 
+	else
 	{
-		value = theplan.length();
+		value[0] = theplan.length();
 	};
+
 	if(violations.find("anonymous") != violations.end())
 	{
-		if(metric && metric->opt == E_MAXIMIZE)
+		if(metric)
 		{
-			value -= violations.find("anonymous")->second;
+			list<optimization>::const_iterator j = metric->opt.begin();
+			for(unsigned int i = 0;i < value.size();++i,++j)
+			{
+				if(*j == E_MAXIMIZE)
+				{
+					value[i] += violations.find("anonymous")->second;
+				}
+				else
+				{
+					value[i] -= violations.find("anonymous")->second;
+				}
+			};
 		}
 		else
 		{
-			value += violations.find("anonymous")->second;
+			value[0] += violations.find("anonymous")->second;
 		};
 	};
+
+	if(stepLengthDefault && !doneSL)
+	{
+		value.push_back(stepcount);
+	}
+
 	return value;
 };
 
@@ -1356,14 +1395,14 @@ void Validator::setMaxTime()
 	maxTime = theplan.lastHappening()->getTime();
 
 
-	
+
 };
 
 bool Validator::graphsToShow() const
 {
 	map<double,pair<double,double> >::const_iterator disconts;
 	map<double,double>::const_iterator conts;
-	
+
 
 	for(map<const FuncExp *,FEGraph*>::const_iterator i = graphs.begin(); i != graphs.end(); ++i)
 	{
@@ -1374,7 +1413,7 @@ bool Validator::graphsToShow() const
 		conts = i->second->points.begin();
 
 		if( (disconts != i->second->discons.end()) || (conts != i->second->points.end()) ) return true;
-		
+
 	};
 
 
@@ -1395,7 +1434,7 @@ void FEGraph::drawLaTeXAxis(double maxTime) const
 	*report << "\\put("<<graphMaxH*0.9+ff<<","<<timeAxisV<<"){ \\line(0,-1){0.05} }\n";
 	*report << "\\put("<<graphMaxH*0.9+ff<<","<<timeAxisV - 0.1 <<"){ "<< maxTime <<" }\n";
 
-	
+
 	*report << "\\put("<<0+ff<<","<<timeAxisV<<"){ \\line(-1,0){0.05} }\n";
 	*report << "\\put("<<-0.2+ff<<","<<timeAxisV<<"){ 0 }\n";
 
@@ -1406,7 +1445,7 @@ void FEGraph::drawLaTeXAxis(double maxTime) const
 		*report << "\\put("<<0+ff<<","<<graphMaxV<<"){ \\line(-1,0){0.05} }\n";
 		*report << "\\put("<<-0.3+ff<<","<<graphMaxV<<"){ "<<maxValue<<" }\n";
 	};
-	
+
 
 	if(minValue < 0)
 	{
@@ -1421,7 +1460,7 @@ void FEGraph::drawLaTeXAxis(double maxTime) const
 	for(set<double>::const_iterator i = happenings.begin(); i != happenings.end();++i)
 	{
 		*report << "\\put("<< ( (*i)/maxTime)*graphMaxH*0.9 +ff <<","<<timeAxisV<<"){ \\line(0,-1){0.05} }\n";
-	}; 
+	};
 };
 
 FEGraph * Validator::getGraph(const FuncExp * fe)
@@ -1429,7 +1468,7 @@ FEGraph * Validator::getGraph(const FuncExp * fe)
 	FEGraph * g;
 	//find graph or create it if it does not exist
 	map<const FuncExp *,FEGraph*>::const_iterator j = graphs.find(fe);
-	
+
 	if(j != graphs.end())
 	{
 		g = j->second;
@@ -1439,7 +1478,7 @@ FEGraph * Validator::getGraph(const FuncExp * fe)
 		g =  new FEGraph(fe);
 
 		graphs[fe] = g;
-									
+
 	};
 
 	return g;
@@ -1483,7 +1522,7 @@ void FEGraph::setMinMax()
 
       	if((minValue == 0) && (maxValue == 0)) maxValue = 1;
   };
-  
+
    if(minValue >= 0 )
 		timeAxisV = 0;
 
@@ -1494,9 +1533,9 @@ void FEGraph::setMinMax()
 		timeAxisV = ((- minValue) / (maxValue - minValue) ) * graphMaxV;
 		dround(timeAxisV);
 	};
-	
+
     //cout << minValue << " , "<<maxValue <<"\n";
-   
+
 };
 
 void round(pair<double,double> & d)
@@ -1511,27 +1550,27 @@ void FEGraph::amendPoints(double maxTime)
    double tooSmall =  (0.0041*maxTime)/(graphMaxH*0.9);
    map<double,double> copyPoints = points;
    double prevPoint = 0;
-   
+
    for(map<double,double>::const_iterator i = copyPoints.begin(); i != copyPoints.end(); )
    {
-         prevPoint = i->first;   
-         ++i;     if( i == copyPoints.end()) break; 
-               
+         prevPoint = i->first;
+         ++i;     if( i == copyPoints.end()) break;
+
         if(i->first - prevPoint < tooSmall)
          {
            points.erase(prevPoint);
-         };      
+         };
    };
 
    copyPoints = points;
-   
+
    for(map<double,double>::const_iterator j = copyPoints.begin(); j != copyPoints.end(); ++j)
-   {  
-         //no need to have a point on top of a discontinuity       
+   {
+         //no need to have a point on top of a discontinuity
 
           map<double,pair<double,double> >::const_iterator k = discons.find(j->first);
           if(k != discons.end())
-          {       
+          {
             if((k->second.first - k->second.second > tooSmall) || (k->second.first - k->second.second < -tooSmall))
                 points.erase(j->first);
           };
@@ -1540,7 +1579,7 @@ void FEGraph::amendPoints(double maxTime)
 };
 
 void FEGraph::drawLaTeXLine(double t1,double y1,double t2,double y2,double maxTime) const
-{  
+{
    double graphMin;
    if(minValue > 0 ) graphMin = minValue; else graphMin = 0;
     if((minValue > 0 && (y1 < minValue || y2 < minValue)) || y1 > maxValue || y2 > maxValue ) return;
@@ -1552,10 +1591,10 @@ void FEGraph::drawLaTeXLine(double t1,double y1,double t2,double y2,double maxTi
 	//latex dosent like numbers too small
 	dround(lt1); dround(ly1);
 	dround(lt2); dround(ly2);
-		
+
 	double midValue = (ly1+ly2)/2;
 	dround(midValue);
-	
+
 
 	//latex doesnt like values being too close
 	if( (lt2 - lt1 > 0.0041) )
@@ -1568,22 +1607,22 @@ void FEGraph::drawLaTeXLine(double t1,double y1,double t2,double y2,double maxTi
 
 void FEGraph::displayLaTeXGraph(double maxTime)
 {
-   
+
   amendPoints(maxTime);
 	map<double,pair<double,double> >::const_iterator disconts = discons.begin();
 
 	map<double,double>::const_iterator conts = points.begin();
 
 	if( (disconts == discons.end()) && (conts == points.end()) ) return;
-	
+
 	setMinMax();
-	
+
 	if(title == "") *report << "%%--------- Graph of "<<*fe<<" --------------------------------------------------\n";
   else *report << "%%--------- "<<title<<" --------------------------------------------------\n";
-  
+
 	*report << "\\begin{figure}[!ht] \\begin{center} \\setlength{\\unitlength}{"<<pointSize<<"pt}\n";
 	*report << "\\begin{picture}("<<graphMaxH*0.9<<","<<graphMaxV*1.16<<")(0,"<<0<<")\n";
-	
+
 
 
 	*report << "\\thinlines\n";
@@ -1591,7 +1630,7 @@ void FEGraph::displayLaTeXGraph(double maxTime)
 	drawLaTeXAxis(maxTime);
 	*report << "\\thicklines\n";
 
-	
+
 	double time,value,tCirc,valCirc;
 	double prevTime = 0;
 	double nextTime = 0;
@@ -1604,10 +1643,10 @@ void FEGraph::displayLaTeXGraph(double maxTime)
 	prevTime = initialTime;
 	prevValue = initialValue;
 	bool ctsActivity;
-	    
+
 	//draw it!
 
-	//draw discontinuous segments of graph    
+	//draw discontinuous segments of graph
 	for( ; disconts != discons.end() ; ++disconts)
 	{
 		//draw cts bit before discontinuity
@@ -1616,30 +1655,30 @@ void FEGraph::displayLaTeXGraph(double maxTime)
 		{
 			//draw flat line before cts bit
 			drawLaTeXLine(prevTime,prevValue,conts->first,conts->second,maxTime);
-			
+
 			prevTime = conts->first;
 			prevValue = conts->second;
-      
+
 			ctsActivity = false;
-			    
+
 			for( ; conts->first <= disconts->first ; )
 			{
-				
+
 				time = conts->first;
-				value = conts->second; 
+				value = conts->second;
 				++conts;
-				        
+
 				if( (conts == points.end()) || (conts->first > disconts->first) )
 				{
 					if(!ctsActivity) drawLaTeXLine(prevTime,prevValue,disconts->first,disconts->second.first,maxTime);
 					else drawLaTeXLine(nextTime,nextValue,disconts->first,disconts->second.first,maxTime);
-					
-					break;	
+
+					break;
 				};
 
 
 				ctsActivity = true;
-				
+
 				if( conts->first <= disconts->first)
 				{
 					nextTime = conts->first;
@@ -1654,17 +1693,17 @@ void FEGraph::displayLaTeXGraph(double maxTime)
 					nextValue = disconts->second.first;
 				};
 
-				         
+
 				drawLaTeXLine(time,value,nextTime,nextValue,maxTime);
-				
+
 
 			};
-		
+
 			prevTime = disconts->first;
 			prevValue = disconts->second.second;
 
-			
-			    
+
+
 		}
 		else
 
@@ -1680,8 +1719,8 @@ void FEGraph::displayLaTeXGraph(double maxTime)
 			prevValue = disconts->second.second;
 		};
 
-		
-			
+
+
 		//draw little circles to show values at discontinuity
 
 
@@ -1691,9 +1730,9 @@ void FEGraph::displayLaTeXGraph(double maxTime)
 		//latex dosent like numbers too small
 
 		dround(valCirc); dround(tCirc);
-		
+
 		*report << "\\put("<<tCirc<<","<<valCirc<<"){\\circle{0.04}}\n";
-		
+
 		tCirc = (disconts->first/maxTime)*graphMaxH*0.9;
 		valCirc = (disconts->second.second/(maxValue-minValue))*graphMaxV + timeAxisV;
 		//latex dosent like numbers too small
@@ -1701,8 +1740,8 @@ void FEGraph::displayLaTeXGraph(double maxTime)
 
 		*report << "\\put("<<tCirc<<","<<valCirc<<"){\\circle*{0.04}}\n";
 
-     
-		
+
+
 	};
 
 	//draw line before cts bit
@@ -1712,20 +1751,20 @@ void FEGraph::displayLaTeXGraph(double maxTime)
     nextTime = conts->first;
 		nextValue = conts->second;
 	};
-			
+
 	//draw last cts bit
 	for( ; conts != points.end() ; )
 
 	{
 		time = conts->first;
 		value = conts->second;
-		
+
 		++conts;
 		if(conts == points.end()) break;
-		
+
 		nextTime = conts->first;
 		nextValue = conts->second;
-	          
+
 		drawLaTeXLine(time,value,nextTime,nextValue,maxTime);
 
 
@@ -1739,14 +1778,14 @@ void FEGraph::displayLaTeXGraph(double maxTime)
 		prevTime = nextTime;
 		prevValue = nextValue;
 	};
-	       
+
 	//draw last bit
 	if(maxTime - prevTime > 0.002)
 	{
 		drawLaTeXLine(prevTime,prevValue,maxTime,prevValue,maxTime);
 	};
-	     
-		
+
+
 	if(title == "") *report << "\\end{picture} \\caption{Graph of "<<*fe<<".}\n";
   else *report << "\\end{picture} \\caption{"<<title<<".}\n";
 	*report << "\\end{center} \\end{figure} \n";
@@ -1754,7 +1793,7 @@ void FEGraph::displayLaTeXGraph(double maxTime)
 };
 
 
- 
+
 void Validator::displayLaTeXGraphs() const
 {
 	for(map<const FuncExp *,FEGraph*>::const_iterator i = graphs.begin(); i != graphs.end(); ++i)
@@ -1775,14 +1814,14 @@ int Gantt::getNoPages(int np)
 
 {
 	if(np != 0) return np;
-	
+
 	int noPages = 1;
 	int countNonDAEl = 0;
-	
+
 	double smallElement = 0.04; //smallest acceptable element, no is percentage of length of time line
 								//if too many of these extra pages will appear
 	double length;
-	
+
 	int totalEls = 0;
 	for(map<int, map<int, GanttElement *> >::const_iterator r = chartRows.begin(); r != chartRows.end() ; ++r)
 	{
@@ -1791,10 +1830,10 @@ int Gantt::getNoPages(int np)
 
 	//too many small elements is 50% of the elements
 	int tooMany = int(double(totalEls*0.50));
-	
+
 	map<int,int> smallElCount;
-	
-	
+
+
 	for(map<int, map<int, GanttElement *> >::const_iterator r1 = chartRows.begin(); r1 != chartRows.end() ; ++r1)
 	{
 		for(map<int, GanttElement *>::const_iterator ge = r1->second.begin() ; ge != r1->second.end() ; ++ge)
@@ -1803,10 +1842,10 @@ int Gantt::getNoPages(int np)
 			{
 
 				length = (ge->second->end - ge->second->start)/maxTime;
-				
+
 				for(int n = 2 ; ; ++n)
 				{
-						
+
 					if(	length >= smallElement/n )
 					{
 						break;
@@ -1816,7 +1855,7 @@ int Gantt::getNoPages(int np)
 					   		&& (length >= smallElement/(n+1) ))
 					{
 						++smallElCount[n];
-						break;						
+						break;
 
 					};
 
@@ -1832,7 +1871,7 @@ int Gantt::getNoPages(int np)
 	};
 
 	int totalSmallEls = 0;
-	
+
 
 	for(map<int,int>::reverse_iterator i = smallElCount.rbegin(); i != smallElCount.rend(); ++i)
 	{
@@ -1845,7 +1884,7 @@ int Gantt::getNoPages(int np)
 		};
 
 	};
-	
+
 	return noPages;
 
 };
@@ -1853,7 +1892,7 @@ int Gantt::getNoPages(int np)
 int Gantt::getNoPageRows()
 {
 
-	
+
 	int tooManyRows = 31;
 	int noRows = chartRows.size();
 
@@ -1873,21 +1912,21 @@ void Gantt::drawLaTeXGantt(const Plan & p,int noPages,int noPageRows)
 	buildRows(p);
 
 	shuffleRows();
-	
+
 	displayKey();
 
 	//split across more than one page?
 	int noOfPages = getNoPages(noPages);
 	int noOfPageRows;
 	int numRowsPg1 = 0;
-	
+
 
 	if(noPageRows != 0)
 
 		noOfPageRows = noPageRows;
 	else
 		noOfPageRows = getNoPageRows();
-	
+
 	int numRows = chartRows.size();
 	int startRow,endRow;
 	int rowsPerPage = int(double(numRows)/double(noOfPageRows) + 0.5);
@@ -1901,14 +1940,14 @@ void Gantt::drawLaTeXGantt(const Plan & p,int noPages,int noPageRows)
 
 			endRow = pgr*rowsPerPage;
 			if(pg == 1) numRowsPg1 = endRow - startRow + 1;
-			
+
 			if(endRow > numRows || pgr == noOfPageRows) endRow = numRows;
 
-			
+
 			drawLaTeXGantt( (maxTime/noOfPages)*(pg-1), (maxTime/noOfPages)*pg,startRow,endRow,numRowsPg1);
 		};
 	};
-	
+
 };
 
 
@@ -1919,13 +1958,13 @@ vector<string> Gantt::getSigObjs(const Action * a)
 
 	vector<string> so;
 	//vector<string>::iterator i;
-	
+
 	for(var_symbol_list::const_iterator i = a->getAction()->parameters->begin() ; i != a->getAction()->parameters->end(); ++i)
 	{
 		par = a->getBindings().find(*i)->second->getName();
 		//is parameter a sigificant object?
-		vector<string>::iterator k = std::find(sigObjs.begin(),sigObjs.end(),par);
-		if(k != sigObjs.end())
+		vector<string>::iterator ii = std::find(sigObjs.begin(),sigObjs.end(),par);
+		if(ii != sigObjs.end())
 		{
 
 			so.push_back(par);
@@ -1935,10 +1974,10 @@ vector<string> Gantt::getSigObjs(const Action * a)
 			if(j == usedSigObjs.end()) usedSigObjs.push_back(par);
 		};
 
-		
-		
-		
-		
+
+
+
+
 	};
 
 
@@ -1971,38 +2010,38 @@ void Gantt::buildRows(const Plan & p)
 
 	int pos = 1;
 
-	
+
 	double largestTime;
-	
+
 	double start,end;
 	string label;
 	vector<string> actSigObjs;
 
 
 	vector<int> sigRows;
-	
+
 	vector<const Action*> actions;
-	
+
 	for(Plan::const_iterator i = p.begin() ; i != p.end() ; ++i)
-	{      
+	{
 		if(i.isRegular())
 		{
 			actions = *((*i)->getActions());
-			
+
 			for(vector<const Action*>::const_iterator a = actions.begin();a != actions.end();++a)
 			{
 				if(!(dynamic_cast<EndAction*>(const_cast<Action*>(*a))))
 				{
 
-					 
-					
+
+
 					//find sig Objs
 					actSigObjs = getSigObjs(*a);
 
-						
+
 					//find rows where last element has a sig obj and finishes before this one
 					sigRows.clear();
-					
+
 
 					for(map<int, map<int, GanttElement *> >::const_iterator r = chartRows.begin(); r != chartRows.end() ; ++r)
 					{
@@ -2012,13 +2051,13 @@ void Gantt::buildRows(const Plan & p)
 						if(ge->second->end < (*i)->getTime())
 						{
 							for(vector<string>::const_iterator so = actSigObjs.begin(); so != actSigObjs.end(); ++so)
-							{ 
+							{
 
 								vector<string>::iterator fso = std::find(ge->second->sigObjs.begin(),ge->second->sigObjs.end(),*so);
 								if(fso != ge->second->sigObjs.end()) sigRows.push_back(r->first);
 							};
 						};
-						
+
 					};
 
 					if(sigRows.size() == 1)
@@ -2032,21 +2071,21 @@ void Gantt::buildRows(const Plan & p)
 					{
 						//choose largest one
 						largestTime = 0;
-						
+
 						for(vector<int>::const_iterator sr = sigRows.begin(); sr != sigRows.end(); ++sr)
 						{
 							map<int, GanttElement *>::const_iterator ge = chartRows[*sr].end();
 							--ge;
-							
+
 
 							if( ge->second->end > largestTime )
 							{
 								largestTime = ge->second->end;
-								row = *sr;						
+								row = *sr;
 							};
 
 						};
-						
+
 
 					}
 					else
@@ -2061,62 +2100,62 @@ void Gantt::buildRows(const Plan & p)
 
 
 						{
-						      
+
 							largestTime = -1;//maxTime + 1;
 							//find the largest last time smaller than start time of this action from rows - dont choose row with sig objs
 							for(map<int, map<int, GanttElement *> >::const_iterator r = chartRows.begin(); r != chartRows.end() ; ++r)
 							{
-                            
+
 								map<int, GanttElement *>::const_iterator ge = r->second.end();
 								--ge;
-								
+
 								if( (ge->second->end > largestTime) && (ge->second->end < (*i)->getTime()) && (getSigObj(r->first) == "") )
 								{
 									largestTime = ge->second->end;
-									row = r->first;							
+									row = r->first;
 								};
 
 
 							};
-                         
+
 
 							if(largestTime == -1)
 							{
 								row = chartRows.size() + 1;
-								
+
 							};
-							
+
 						};
 					};
 
-					
 
-			
-                     
+
+
+
 					start = (*i)->getTime();
-						
-                     
+
+
 					if(StartAction * sa = dynamic_cast<StartAction*>(const_cast<Action*>(*a)))
 
-					{	                                    
+					{
 						end = (*i)->getTime() + (*sa).getDuration();
-                  double dur = (*sa).getDuration(); 
-						label = "\\action{"+(*a)->getName() + " [" + toString( dur ) + "]}";  
+                  double dur = (*sa).getDuration();
+						label = "\\action{"+(*a)->getName() + " [" + toString( dur ) + "]}";
 					}
 					else
-					{                
+					{
 						end = (*i)->getTime();
-						label = toString(*a);          
+						label = toString(*a);
 					};
-                     
 
-					chartRows[row][pos++] = new GanttElement( start, end, label, actSigObjs ); 
+
+					chartRows[row][pos++] = new GanttElement( start, end, label, actSigObjs );
 				};
 			};
-		
+
 		};
 
-	}; 
+	};
 
 
 
@@ -2156,11 +2195,11 @@ string Gantt::getSigObj(int r)
 	for(map<int,GanttElement *>::const_iterator ge = chartRows[r].begin(); ge != chartRows[r].end(); ++ge)
 	{
 		for(vector<string>::const_iterator so = sigObjs.begin(); so != sigObjs.end(); ++so)
-		{ 
+		{
 			vector<string>::const_iterator fso = std::find(ge->second->sigObjs.begin(),ge->second->sigObjs.end(),*so);
 			if(fso != ge->second->sigObjs.end()) countSigObjs[*so] = countSigObjs[*so] + 1;
 		};
-		
+
 	};
 
 	if(countSigObjs.size() == 0)
@@ -2171,7 +2210,7 @@ string Gantt::getSigObj(int r)
 	else
 	{
 		most = 0;
-		
+
 		for(map<string,int>::const_iterator i = countSigObjs.begin() ; i != countSigObjs.end() ; ++i)
 		{
 			if(i->second > most)
@@ -2182,33 +2221,33 @@ string Gantt::getSigObj(int r)
 			};
 
 		};
-		
-	}; 
+
+	};
 
 	return ans;
-	
+
 };
 
 void Gantt::shuffleRows()
 {
 	//put rows with the same sig objs together if possible
-	
+
 	if((chartRows.size() < 3) || (usedSigObjs.size() == 0)) return;
 
 	string sigObj1,sigObj2,sigObj3;
 	int rowToTake;
 	bool alltheSameSigObj;
-	
+
 	for(unsigned int row = 1; row < chartRows.size() - 1 ; ++row)
 	{
 		sigObj1 = getSigObj(row);
-		
+
 
 
 		rowToTake = row + 1;
 
-		
-			
+
+
 		for(unsigned int testRow = row + 2; testRow <= chartRows.size() ; ++testRow)
 		{
 
@@ -2234,15 +2273,15 @@ void Gantt::shuffleRows()
 
 
 				if(!alltheSameSigObj) insertRow(rowToTake,testRow);
-				
+
 
 				++rowToTake;
 			};
 
 		};
-		
+
 	};
-	
+
 };
 
 void Gantt::displayKey()
@@ -2251,19 +2290,19 @@ void Gantt::displayKey()
 	int totalNum = 0;
 	string sigObj,lastSigObj,colour;
 
-	
+
 	for(map<int, map<int, GanttElement *> >::const_iterator i = chartRows.begin(); i != chartRows.end() ; ++i)
 	{
 		totalNum += i->second.size();
 	};
-	
+
 	*report << "{\\bf Gantt Chart Key}\\\\\n";
-	   
-	
+
+
 	for(map<int, map<int, GanttElement *> >::const_iterator r = chartRows.begin(); r != chartRows.end() ; ++r)
 		{
 			sigObj = getSigObj(r->first);
-			
+
 			if(sigObj != "")
 			{
 				*report << "Row "<< r->first <<" : ";
@@ -2276,41 +2315,41 @@ void Gantt::displayKey()
 
 				*report << "Row "<< r->first << "\n";
 
-				
+
 
 
 			 *report << "\\begin{tabbing}\n"
 				  << "{\\bf No} \\qquad \\= {\\bf Time} \\qquad \\= {\\bf Action} \\\\\n";
-		
+
 			for(map<int, GanttElement *>::const_iterator j = r->second.begin() ; j != r->second.end() ; ++j)
 			{
-				
-				
+
+
 				*report << j->first << " \\> " << j->second->start << " \\> \\listrowg{" << j->second->label << "} \\\\\n";
 				++pos;
-				
-				
+
+
 			};
 
 
-			*report << "\\end{tabbing}\n";		
+			*report << "\\end{tabbing}\n";
 
-		};	
-	
+		};
+
 };
 
 string Gantt::getColour(int row)
 {
 
-		
+
 	string sigObj = getSigObj(row);
 	if(sigObj == "") return "";
-	
+
 	string ans = "";
 
 	double r = 0,b = 0,g = 0;
 	double cyc = 0;
-	
+
 	int colourNum = 1;
 	for(vector<string>::iterator so = usedSigObjs.begin(); so != usedSigObjs.end(); ++so)
 
@@ -2318,16 +2357,16 @@ string Gantt::getColour(int row)
 	{
 		if(sigObj == *so) break;
 
-		++colourNum;	
+		++colourNum;
 	};
 
 	for(int j = 1; j <= colourNum; ++j)
 	{
 
 		if( (g == 1) && (b == 1) && (r == 1) ) {g = 0; r = 0; b = 0; cyc += 1;};
-		
+
 		b += 1;
-			
+
 		if( b == 2)
 		{
 			b = 0;
@@ -2340,14 +2379,14 @@ string Gantt::getColour(int row)
 			r = 0;
 			g += 1;
 		};
-	
+
 
 		if( g == 2)
 		{
 			g = 0;
-			b = 1;			
+			b = 1;
 		};
-		
+
 	};
 
 	//yellow to orange
@@ -2356,18 +2395,18 @@ string Gantt::getColour(int row)
 	//white to grey
 
 	if( (g == 1) && (b == 1) && (r == 1) ) {g = 0.5; r = 0.5; b = 0.5;};
-	
+
 
 	//swap ordering of green and magenta
 	if( (g == 0) && (b == 1) && (r == 1) ) {g = 1; r = 0; b = 0;}
 	else if( (g == 1) && (b == 0) && (r == 0) ) {g = 0; r = 1; b = 1;};
-	
+
 
 	if( r != 0 || b != 0 || g != 0)
 		ans = "[rgb]{"+toString(r*pow(0.7,cyc))+","+toString(g*pow(0.75,cyc))+","+toString(b*pow(0.65,cyc))+"}";
 	else
 		return "";
-	
+
 	return ans;
 
 };
@@ -2377,21 +2416,21 @@ void Gantt::drawLaTeXGantt(double startTime,double endTime,int startRow,int endR
 	double ff = - 0.038; //fudge factor, qbezier and normal lines are slightly out- LaTeXs fault
 	double y;
 	string colour;
-	
-	
+
+
 	*report << "%%---------------------------------------------------------\n";
 	*report << "\\begin{figure} \\begin{center} \\setlength{\\unitlength}{"<<80<<"pt}\n";
 	*report << "\\begin{picture}("<<graphH<<","<<graphV<<")(0,0)\n";
-	
+
 	*report << "\\put("<<ff<<","<<0<<"){ \\vector(0,1){"<<graphV*0.9<<"} }\n";
 	*report << "\\put("<<ff<<","<<graphV*0.9<<"){ \\begin{sideways} Time \\end{sideways} }\n";
-	*report << "\\put("<<ff<<","<<0<<"){ \\line(-1,0){0.05} }\n";	
+	*report << "\\put("<<ff<<","<<0<<"){ \\line(-1,0){0.05} }\n";
 	*report << "\\put("<<ff+ 0.02 - 0.12<<", "<<0<<"){\\begin{sideways} "<< startTime <<" \\end{sideways}}\n";
 	*report << "\\put("<<ff<<","<<graphV*0.9<<"){ \\line(-1,0){0.05} }\n";
 	*report << "\\put("<<ff -0.12<<","<<graphV*0.9+0.05<<"){\\begin{sideways} "<< endTime <<" \\end{sideways}}\n";
 
 	drawRowNums(startRow,endRow,numRows);
-	
+
 	for(map<int, map<int, GanttElement *> >::const_iterator i = chartRows.begin(); i != chartRows.end() ; ++i)
 	{
 
@@ -2406,7 +2445,7 @@ void Gantt::drawLaTeXGantt(double startTime,double endTime,int startRow,int endR
 					y =  (((j->second->start - startTime)/(endTime-startTime)))*graphV*0.9;
 					dround(y);
 					*report << "\\put("<<ff<<","<<y<<"){ \\line(-1,0){0.05} }\n";
-			
+
 					if( j->second->start != j->second->end )
 
 					{
@@ -2428,7 +2467,7 @@ void Gantt::drawLaTeXGantt(double startTime,double endTime,int startRow,int endR
 			colour = getColour(i->first);
 			if(colour != "") *report << "\\color"<<colour<<"\n";
 			else *report << "\\normalcolor\n";
-			
+
 			for(map<int, GanttElement *>::const_iterator j1 = i->second.begin() ; j1 != i->second.end() ; ++j1)
 			{
 
@@ -2457,7 +2496,7 @@ void Gantt::drawLaTeXGantt(double startTime,double endTime,int startRow,int endR
 	*report << "\\put("<<graphH + 0.1 <<","<<graphV/2 - 1<<"){\\rotcaption{Gantt Chart}} \\end{picture} \n";
 	*report << "\\end{center} \\end{figure} \n";
 	*report << "%%-----------------------------------------------------------\n";
-	
+
 
 };
 
@@ -2470,18 +2509,18 @@ void Gantt::setMaxTime(const Plan & p)
 	{
 		if( (*i)->getTime() > max ) max = (*i)->getTime();
 	};
-	
+
 	maxTime = max;
 
 
-	
+
 };
 
 void Gantt::drawRowNums(int startRow,int endRow,int numRows)
 {
-	
+
 	double spacing = graphH/numRows;
-	
+
 	for(int r = endRow; r >= startRow ; --r)
 	{
 		*report << "\\put("<< spacing*(r - startRow + 0.5) <<","<<0 - 0.15<<"){\\begin{sideways}"<<r<<" \\end{sideways}}\n";
@@ -2495,12 +2534,12 @@ void Gantt::drawLaTeXDAElement(const GanttElement * ge,int row,int pos,double st
 
 	double ff = - 0.0515;
 	double ff2 = 0.005;
-	
 
-	
+
+
 	double geStart,geEnd;
 
-	
+
 	if(ge->start < startTime)
 		geStart = startTime;
 	else
@@ -2510,24 +2549,24 @@ void Gantt::drawLaTeXDAElement(const GanttElement * ge,int row,int pos,double st
 		geEnd = endTime;
 	else
 		geEnd = ge->end;
-		
+
 	if(geEnd > endTime) geEnd = endTime;
 
-		
+
 	double posX = ((geStart - startTime)/(endTime-startTime))*graphV*0.9;
 
 	double posY = (graphH/numRows)*(numRows - row + 0.9);
-	
+
 	pair<double,double> p1 = transPoint(posX,posY);
 
 	round(p1);
 
-	
+
 	double length = ((geEnd - geStart)/(endTime-startTime))*graphV*0.9;
 	double height = (graphH/numRows)*0.9;
 	dround(height); dround(length);
 
-		
+
 	if( (ge->start >= startTime) && (ge->end <= endTime) )
 	{
 		*report << "\\put("<<p1.first<<","<<p1.second<<"){\\framebox("<<height<<","<<length<<"){ \\begin{sideways} "<<pos<<"  \\end{sideways}}}\n";
@@ -2542,7 +2581,7 @@ void Gantt::drawLaTeXDAElement(const GanttElement * ge,int row,int pos,double st
 		     << "\\put("<<ff+p1.first + height<<","<<p1.second<<"){ \\line(0,1){"<<length<<"} }\n"
 		     << "\\put("<<ff+p1.first + height/2<<","<<p1.second + length/2<<"){ \\begin{sideways} "<<pos<<"  \\end{sideways} }\n";
 
-	
+
 
 	}
 
@@ -2555,7 +2594,7 @@ void Gantt::drawLaTeXDAElement(const GanttElement * ge,int row,int pos,double st
 			 << "\\put("<<ff+p1.first<<","<<p1.second<<"){ \\line(1,0){"<<height<<"} }\n"
 		     << "\\put("<<ff+p1.first+height<<","<<p1.second<<"){ \\line(0,1){"<<length<<"} }\n"
 		     << "\\put("<<ff+p1.first + height/2<<","<<p1.second + length/2<<"){ \\begin{sideways} "<<pos<<"  \\end{sideways} }\n";
-	
+
 
 	};
 
@@ -2563,19 +2602,19 @@ void Gantt::drawLaTeXDAElement(const GanttElement * ge,int row,int pos,double st
 };
 
 void Gantt::drawLaTeXElement(const GanttElement * ge,int row,int pos,double startTime,double endTime,int numRows) const
-{	
+{
 
 
 
 	int numBoxes;
-	
+
 	if(numRows > 24)
 		numBoxes = 1;
-	else 
+	else
 		numBoxes = 24 / numRows; //num of boxes per row
 
-		
-	
+
+
 	int boxPos = pos % numBoxes;
 	double boxSize = 0.1;
 	double height = (graphH/numRows)*0.9;
@@ -2584,21 +2623,21 @@ void Gantt::drawLaTeXElement(const GanttElement * ge,int row,int pos,double star
 	double boxX = posX - boxSize/2;
 	double boxY = posY + boxPos*(height/numBoxes) + boxSize/2;
 
-	
+
 	pair<double,double> p11 = transPoint(posX,posY);
 	pair<double,double> p13 = transPoint(posX,boxY - boxSize/2);
 
 
 	pair<double,double> p21 = transPoint(posX,boxY + boxSize/2);
 	pair<double,double> p23 = transPoint(posX,posY + height);
-	
+
 	pair<double,double> p4 = transPoint(boxX,boxY);
 
 	round(p11); round(p13);
 	round(p21); round(p23);
 
 	*report << "\\put("<<p11.first<<","<<p11.second<<"){ \\line(-1,0){"<<p11.first - p13.first<<"} }\n";
-	
+
 	*report << "\\put("<<p4.first<<","<< p4.second <<"){\\framebox("<<boxSize<<","<<boxSize<<")[l]{ \\begin{sideways} {\\tiny "<<pos<<"  } \\end{sideways}}}\n";
 
 	*report << "\\put("<<p21.first<<","<<p21.second<<"){ \\line(-1,0){"<<p21.first - p23.first<<"} }\n";
@@ -2666,7 +2705,7 @@ double Validator::timeOf(const Action * a) const
 {
 	return theplan.timeOf(a);
 };
- 
+
 pair<double,double> getSlideLimits(set<double> & actionTimes,double & actionTime,double & deadLine)
 {
   pair<double,double> slideLimits = make_pair(actionTime,actionTime);
@@ -2890,7 +2929,7 @@ bool PlanRepair::slideEndOfPlan(const plan * repairingPlan,const plan_step * fir
    double originalStartTime = firstAction->start_time;
    double shiftMax = deadLine - originalStartTime - endOfPlanTimeLength;
    if(shiftMax <= 0) return false;
-      
+
    bool searching = true;
    double shiftTime;
    double lastShiftTime = 0;
@@ -3123,7 +3162,7 @@ pair<const plan_step *,pair<bool,bool> > PlanRepair::repairPlanOneAction(const p
 {
 
  const plan_step * nextFlawedAction = 0;
- bool planRepaired = false, goalSatisfied = false;
+ bool planRepaired = false; //, goalSatisfied = false;
  bool actionFixed = false;
  string actionName = getName(firstAction);
  double actionTime = firstAction->start_time;
@@ -3174,7 +3213,7 @@ pair<const plan_step *,pair<bool,bool> > PlanRepair::repairPlanOneAction(const p
 
 
             if(planRepairValidator->getErrorLog().getConditions().size() == 0)
-            {  if(planRepairValidator->checkGoal(theGoal)) goalSatisfied = true;
+	      {  if(planRepairValidator->checkGoal(theGoal)) //goalSatisfied = true;
                     //cout << "Satisfied "<< actionName << " at time "<<actionTime<<"\n";
                actionFixed = true; planRepaired = true; break;
             };
@@ -3242,7 +3281,7 @@ void Validator::reportViolations() const
 	if(LaTeX) *report << "\\\\\n";
 	*report << "Violations:\n";
 	if(LaTeX) *report << "\\\\\n\\begin{tabular}{lc}\n";
-	
+
 	for(map<string,int>::const_iterator i = violations.begin();i != violations.end();++i)
 	{
 		if(i->second == 0) continue;
@@ -3301,17 +3340,17 @@ plan * addTimedInitialActions(plan * aPlan, vector<plan_step *> & timedInitialLi
 bool isLockedAction(plan_step * ps, set<plan_step *> & lockedActions)
 {
   set<plan_step *>::const_iterator i = lockedActions.find(ps);
-  return (i != lockedActions.end());  
+  return (i != lockedActions.end());
 };
 
 void PlanRepair::setPlanAndTimedInitLits(const plan * aPlan, set<plan_step *> lockedActions)
 {
    plan * planWithoutTimedInits = new plan();
-    
+
    for(pc_list<plan_step*>::const_iterator i = aPlan->begin(); i != aPlan->end(); ++i)
    {
       if(isLockedAction(*i,lockedActions)) timedInitialLiteralActions.push_back(*i);
-      else planWithoutTimedInits->push_back(*i);     
+      else planWithoutTimedInits->push_back(*i);
    };
 
   p = planWithoutTimedInits;
@@ -3319,8 +3358,8 @@ void PlanRepair::setPlanAndTimedInitLits(const plan * aPlan, set<plan_step *> lo
 
 
 /*
-void PlanRepair::repairPlanBeagle() 
-// Note that repairPlan and repairPlanBeagle have been swapped in this file 
+void PlanRepair::repairPlanBeagle()
+// Note that repairPlan and repairPlanBeagle have been swapped in this file
 // compared with earlier versions (VAL-3.2 in particular)
 {
  bool latex = LaTeX;
@@ -3351,7 +3390,7 @@ void PlanRepair::repairPlanBeagle()
              if(const UnsatInvariant * usi2 = dynamic_cast<const UnsatInvariant*>(*s))
              {
                    if(usi->action == usi2->action) addToConds = false;
-                   
+
              };
         };
      };
@@ -3445,9 +3484,9 @@ void PlanRepair::repairPlanBeagle()
                         };
                  bNumber = aNumber(startingPoint++);
                  if(((slideLimits.second - slideLimits.first)*bNumber < v.getTolerance()) || continueRepairingTemp || startingPoint > limit) break;
-                 else {  
+                 else {
                  	//cout << "Deleted here " << planRepairValidator <<"\n";
-                 	delete planRepairValidator; 
+                 	delete planRepairValidator;
                  	planRepairValidator = 0;
                  };
             }; //loop thro' different points end, sliding action (while loop)

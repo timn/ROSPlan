@@ -42,6 +42,7 @@ using std::ifstream;
 using std::ofstream;
 using std::ostream;
 using std::cerr;
+using std::istream;
 
 namespace VAL {
 
@@ -81,9 +82,9 @@ void performTIMAnalysis(char * argv[])
     current_analysis->setFactory(new TIMfactory());
     auto_ptr<EPSBuilder> eps(new specEPSBuilder<TIMpredSymbol>());
     Associater::buildEPS = eps;
-    
-    ifstream* current_in_stream;
-    yydebug=0; // Set to 1 to output yacc trace 
+
+    istream* current_in_stream;
+    yydebug=0; // Set to 1 to output yacc trace
 
     yfl= new yyFlexLexer;
 
@@ -91,9 +92,21 @@ void performTIMAnalysis(char * argv[])
 
 	for(int i = 0;i < 2;++i)
 	{
-		current_filename= argv[i];
-	//	cout << "File: " << current_filename << '\n';
-		current_in_stream = new ifstream(current_filename);
+        bool realfile = false;
+		if(argv[i][0]=='-')
+        {
+            current_filename = (char*)"stdin";
+            //cout << "Here we are....\n";
+            current_in_stream = &std::cin;
+            realfile = false;
+        }
+        else
+        {
+            current_filename= argv[i];
+            cout << "File: " << current_filename << '\n';
+            current_in_stream = new ifstream(current_filename);
+            realfile = true;
+        }
 		if (current_in_stream->bad())
 		{
 		    // Output a message now
@@ -120,7 +133,10 @@ void performTIMAnalysis(char * argv[])
 		    // Output syntax tree
 		    //if (top_thing) top_thing->display(0);
 		}
-		delete current_in_stream;
+		if(realfile)
+        {
+            delete current_in_stream;
+        }
     }
     // Output the errors from all input files
     if(current_analysis->error_list.errors) {
@@ -145,7 +161,7 @@ void performTIMAnalysis(char * argv[])
     current_analysis->the_domain->visit(&dapb);
 
 	theTC = new TypeChecker(current_analysis);
-   	if (!theTC->typecheckDomain()) {
+    	if (!theTC->typecheckDomain()) {
 		cerr << "Type Errors Encountered in Domain File\n";
 		cerr << "--------------------------------------\n\n";
 		cerr << "Due to type errors in the supplied domain file, the planner\n";
@@ -163,10 +179,14 @@ void performTIMAnalysis(char * argv[])
 		theTC->typecheckProblem();
 		exit(0);
 	}
+    TypePredSubstituter a;
+    current_analysis->the_problem->visit(&a);
+   	current_analysis->the_domain->visit(&a);
 
    	Analyser aa(dapb.getIgnores());
    	current_analysis->the_problem->visit(&aa);
    	current_analysis->the_domain->visit(&aa);
+
 //    current_analysis->the_domain->predicates->visit(&aa);
 
 	if(FAverbose && current_analysis->the_domain->functions)

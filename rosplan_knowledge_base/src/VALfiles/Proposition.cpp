@@ -1028,7 +1028,7 @@ Comparison::evaluate(const State * s,vector<const DerivedGoal*> DPs) const
     if(ctsFtn == 0)  return evaluateAtPoint(s); 
     // RH proposed Error version here, but seems
     // wrong to me!
-
+//cout << "CHECK WITH " << rhsIntervalOpen << " " << endOfInterval << "\n";
     return ctsFtn->checkInvariant(this,s,endOfInterval,rhsIntervalOpen);
    
      /*
@@ -2290,11 +2290,12 @@ DerivedGoal::evaluate(const State * s,vector<const DerivedGoal*> DPs) const
  if(ace != 0) const_cast<Proposition*>(deriveFormula)->setUpComparisons(ace,rhsOpen);
 
 
-
+//cout << "Looking for " << *this << "\n";
  map<string,bool>::iterator i = evals.find(dpName);
 
  if(i != evals.end())
    {              
+   //cout << "Found it and it is " << i->second << "\n";
      return i->second;
    };
 

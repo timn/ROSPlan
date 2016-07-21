@@ -42,19 +42,19 @@ include_directories(${OPENGL_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS})
 
 ## val sources
 set(VAL_SOURCES
-	src/VALfiles/DebugWriteController.cpp
+	src/VALfiles/parsing/DebugWriteController.cpp
 	src/VALfiles/FastEnvironment.cpp
 	src/VALfiles/FuncAnalysis.cpp
-	src/VALfiles/SASActions.cpp
+##	src/VALfiles/SASActions.cpp
 	src/VALfiles/SimpleEval.cpp
 	src/VALfiles/TIM.cpp
 	src/VALfiles/TimSupport.cpp
 	src/VALfiles/ToFunction.cpp
 	src/VALfiles/TypedAnalyser.cpp
-	src/VALfiles/ValidatorAPI.cpp
+##	src/VALfiles/ValidatorAPI.cpp
 	src/VALfiles/instantiation.cpp
-	src/VALfiles/pddl+.cpp
-	src/VALfiles/ptree.cpp
+	src/VALfiles/parsing/pddl+.cpp
+	src/VALfiles/parsing/ptree.cpp
 	src/VALfiles/typecheck.cpp
 	src/VALfiles/Validator.cpp
 	src/VALfiles/Action.cpp
@@ -72,7 +72,8 @@ set(VAL_SOURCES
 	src/VALfiles/PrettyPrinter.cpp
 	src/VALfiles/random.cpp
 	src/VALfiles/LaTeXSupport.cpp
-	src/VALfiles/Utils.cpp)
+	src/VALfiles/Utils.cpp
+)
 
 ## planning system sources
 set(PLANNING_SOURCES

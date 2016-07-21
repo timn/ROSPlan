@@ -74,7 +74,7 @@ public:
 
 
 class InitialStateEvaluator : public PrimitiveEvaluator {
-protected: 
+protected:
 	friend class ParameterDomainConstraints;
 	friend class LitStoreEvaluator;
 	static IState initState;
@@ -85,6 +85,9 @@ public:
 	{};
 	static void setInitialState();
 	virtual void evaluateSimpleGoal(VAL::FastEnvironment * f,VAL::simple_goal * s);
+	static const IState0Arity & getInit0State() {
+        return init0State;
+    }
 };
 
 typedef PrimitiveEvaluatorConstructor<InitialStateEvaluator> ISC;
@@ -98,27 +101,29 @@ protected:
 
 	VAL::TypeChecker * tc;
 	VAL::FastEnvironment * f;
-	
+
 
 	VAL::pred_symbol * const equality;
-	
+
 	bool isFixed;
 	bool undefined;
 	double nvalue; // Used for numeric values.
 	bool isDuration;
 
 	PrimitiveEvaluator * const primev;
-	
+
 public:
+
+    static bool verbose;
 
 	template<typename PEC>
 	SimpleEvaluator(VAL::TypeChecker * const tcIn, VAL::FastEnvironment * const ff,PrimitiveEvaluatorConstructor<PEC> pec) : valueTrue(true), unknownTrue(false), valueFalse(false), unknownFalse(false), tc(tcIn), f(ff),
 		equality(VAL::current_analysis->pred_tab.symbol_probe("=")),
-		primev(pec(valueTrue,unknownTrue,valueFalse,unknownFalse)) 
+		primev(pec(valueTrue,unknownTrue,valueFalse,unknownFalse))
 	{};
 
 	~SimpleEvaluator() {delete primev;};
-	
+
 	bool reallyTrue() const
 	{
 		return !unknownTrue && valueTrue;
@@ -138,7 +143,7 @@ public:
 	}
 
 	static void setInitialState() {InitialStateEvaluator::setInitialState();};
-	
+
 	virtual void visit_simple_goal(VAL::simple_goal *);
 	virtual void visit_qfied_goal(VAL::qfied_goal *);
 	virtual void visit_conj_goal(VAL::conj_goal *);
@@ -164,6 +169,7 @@ public:
 	virtual void visit_float_expression(VAL::float_expression * s);
 	virtual void visit_special_val_expr(VAL::special_val_expr * s);
 	virtual void visit_func_term(VAL::func_term * s);
+	virtual void visit_class_func_term(VAL::class_func_term * s);
 
 
 

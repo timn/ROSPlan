@@ -47,7 +47,7 @@ using std::pair;
 #include "FastEnvironment.h"
 #include "Environment.h"
 
-/* Note that it is possible that there is still a problem with the construction 
+/* Note that it is possible that there is still a problem with the construction
  * of PropStores for timed initial literals. In particular, notice that the
  * construction of PropStores for standard cases is managed by the TypedPredSubstituter
  * which visits all the pred_decls after the end of the domain visit, causing them
@@ -55,7 +55,7 @@ using std::pair;
  * initial literals, by recording the times they occur in the TypedPredSubstituter
  * at the outset and then creating them before going on to the Analyser phase.
  */
- 
+
 namespace VAL {
 
 extern TypeChecker * theTC;
@@ -68,7 +68,7 @@ class Associater;
 void cwrite(const parameter_symbol * p,ostream & o);
 
 class PropInfo {
-private: 
+private:
 	static int x;
 	int id;
 public:
@@ -141,12 +141,12 @@ public:
 //		cout << "Getting for " << p->head->getName() << "\n";
 		return ep;
 	};
-	
+
 	typedef CascadeMap<parameter_symbol *,PropInfo>::iterator iterator;
-	
+
 	iterator begin() {return records.begin();};
 	iterator end() {return records.end();};
-// Return first match if there is one, when f contains null values for 
+// Return first match if there is one, when f contains null values for
 // unbound arguments.
 	PropInfo * partialGet(FastEnvironment * f,const proposition * p) const;
 };
@@ -157,13 +157,13 @@ private:
 	I i;
 public:
 	TypeIterator(I & x) : i(x) {};
-	
-	TypeIterator & operator++() 
+
+	TypeIterator & operator++()
 	{
 		++i;
 		return *this;
 	};
-	pddl_type * operator*() 
+	pddl_type * operator*()
 	{
 		if(!(*i))
 		{
@@ -209,7 +209,7 @@ public:
 	};
 	TypeExtractor(int arity) : tpsSets(0), far(arity)
 	{};
-	 
+
 	bool operator==(const TypeExtractor & t) const
 	{
 		return far==t.far;
@@ -221,7 +221,7 @@ public:
 		return *this;
 	};
 
-	pddl_type * operator*() 
+	pddl_type * operator*()
 	{
 // 3 x 2 x 2
 // 12 elements
@@ -272,14 +272,14 @@ public:
 
 	PropInfo * get(const proposition * p) const
 	{
-		SimplePropStore * s = 
+		SimplePropStore * s =
 			records.get(typeIt(p->args->begin()),typeIt(p->args->end()));
 		if(s) return s->get(p);
 		return 0;
 	};
 	PropInfo * get(FastEnvironment * f,const proposition * p) const
 	{
-		SimplePropStore * s = 
+		SimplePropStore * s =
 			records.get(typeIt(makeIterator(f,p->args->begin())),
 						typeIt(makeIterator(f,p->args->end())));
 		if(s) return s->get(f,p);
@@ -287,7 +287,7 @@ public:
 	};
 	PropInfo * get(Environment * f,const proposition * p) const
 	{
-		SimplePropStore * s = 
+		SimplePropStore * s =
 			records.get(typeIt(makeIterator(f,p->args->begin())),
 						typeIt(makeIterator(f,p->args->end())));
 		if(s) return s->get(f,p);
@@ -301,7 +301,7 @@ public:
 	//cout << "Compound store\n";
 		records.get(typeIt(p->args->begin()),typeIt(p->args->end()))->add(p,pi);
 	};
-	
+
 	void write(ostream & o) const
 	{
 		for(vector<SimplePropStore *>::const_iterator i = stores.begin();
@@ -335,7 +335,7 @@ public:
 		pf = p;
 	};
 	virtual ~PropInfoFactory() {};
-	virtual PropInfo * createPropInfo(proposition * p) 
+	virtual PropInfo * createPropInfo(proposition * p)
 	{
 		return new PropInfo();
 	};
@@ -346,11 +346,11 @@ public:
 };
 
 struct OpProp {
-	
+
 	operator_* op;
 	derivation_rule* drv;
 	const proposition* second;
-	
+
 
 	OpProp(operator_* o, const proposition * p) : op(o), drv(0), second(p) {};
 	OpProp(derivation_rule* o, const proposition *p) : op(0), drv(o), second(p) {};
@@ -364,12 +364,12 @@ public:
 protected:
 	holding_pred_symbol * parent;
 
-	
+
 // The Types structure contains symbols whose types are what we want, rather than
 // the symbols themselves. This means that we always have one layer of indirection
-// to get to the types. 
+// to get to the types.
 	Types types;
-	
+
 	int initialState;
 	int posgoalState;
 	int neggoalState;
@@ -384,14 +384,14 @@ protected:
 	PropStore * records() const;
 
 	map<double,PropStore *> timedInitials;
-	
+
 	PropStore * getAt(double t) const;
 
 	bool owner;
-	
-	
+
+
 public:
-	virtual ~extended_pred_symbol() 
+	virtual ~extended_pred_symbol()
 	{
 		if(owner)
 		{
@@ -402,8 +402,8 @@ public:
 			};
 		};
 	};
-	extended_pred_symbol(pred_symbol * nm,proposition * p) : pred_symbol(*nm), 
-			parent(0), types(p->args->size()), initialState(0), posgoalState(0), 
+	extended_pred_symbol(pred_symbol * nm,proposition * p) : pred_symbol(*nm),
+			parent(0), types(p->args->size()), initialState(0), posgoalState(0),
 			neggoalState(0),
 			pospreconds(), negpreconds(), adds(), dels(), props(0),
 			owner(false)
@@ -416,8 +416,8 @@ public:
 			};
 	};
 	template<class TI>
-	extended_pred_symbol(pred_symbol * nm,TI s,TI e) : pred_symbol(*nm), 
-			parent(0), types(e-s,(pddl_type *)0), initialState(0), posgoalState(0), 
+	extended_pred_symbol(pred_symbol * nm,TI s,TI e) : pred_symbol(*nm),
+			parent(0), types(e-s,(pddl_type *)0), initialState(0), posgoalState(0),
 			neggoalState(0),
 			pospreconds(), negpreconds(), adds(), dels(), props(0), owner(true)
 	{
@@ -443,29 +443,29 @@ public:
 	OpProps::const_iterator delsBegin() const {return dels.begin();};
 	OpProps::const_iterator delsEnd() const {return dels.end();};
 	int arity() const {return types.size();};
-	
+
 	holding_pred_symbol * getParent() const {return parent;};
 
 	void setParent(holding_pred_symbol * h) {parent = h;};
-	void setGoal(bool posGl) 
+	void setGoal(bool posGl)
 	{
-		if(posGl) 
+		if(posGl)
 		{
 			++posgoalState;
-		} 
-		else 
+		}
+		else
 		{
 			++neggoalState;
 		};
 	};
-	void setInitial(proposition * p) 
+	void setInitial(proposition * p)
 	{
 		PropInfo * pi = PropInfoFactory::instance().createPropInfo(p);
 		vector<parameter_symbol *> eitherTypes;
 		vector<pddl_type_list::iterator> params;
 		for(parameter_symbol_list::iterator i = p->args->begin();i != p->args->end();++i)
 		{
-			if(!((*i)->type)) 
+			if(!((*i)->type))
 			{
 				if((*i)->either_types)
 				{
@@ -487,7 +487,7 @@ public:
 				{
 					eitherTypes[i]->type = *(params[i]);
 				};
-				//cout << *p << "\n";  
+				//cout << *p << "\n";
 				ps->add(p,pi);
 				int k = params.size()-1;
 				while(k >= 0)
@@ -513,7 +513,7 @@ public:
 		};
 		++initialState;
 	};
-// Note that the machinery for handling either types has not been threaded 
+// Note that the machinery for handling either types has not been threaded
 // into the timed initial literals!
 	void setInitialPos(proposition * p,double t)
 	{
@@ -527,18 +527,18 @@ public:
 	int isNegGoal() const {return neggoalState;};
 	int isInitial() const {return initialState;};
 
-	bool isStatic() const 
+	bool isStatic() const
 	{
 		return adds.empty() && dels.empty();
 	};
-	
+
 	bool isCompletelyStatic(FastEnvironment * f,const proposition * p) const
 	{
 		if(!appearsStatic()) return false;
 		if(isDefinitelyStatic()) return true;
 
 		extended_pred_symbol * eps = records()->getEP(f,p);
-/*		if(eps) 
+/*		if(eps)
 		{
 			cout << "Final check with " << *eps << "\n";
 		}
@@ -546,7 +546,7 @@ public:
 		{
 			cout << "Final fail with " << p->head->getName() << "\n";
 		};
-*/		
+*/
 		if(eps) return eps->appearsStatic();
 		return false;
 	};
@@ -555,7 +555,7 @@ public:
 	{
 		return timedInitials.empty() && adds.empty() && isPrimitiveType();
 	}
-	
+
 	bool isDefinitelyStatic() const
 	{
 		if(!appearsStatic()) return false;
@@ -602,46 +602,46 @@ public:
 	{
 		return records()->getEP(f,p);
 	};
-		
+
 	bool appearsStatic() const
 	{
 		return isStatic() && timedInitials.empty();
 	};
-	
+
 	bool decays() const {return adds.empty() && !dels.empty();};
-	
-	void addPosPre(operator_ * o,const proposition * p) 
+
+	void addPosPre(operator_ * o,const proposition * p)
 	{
 		pospreconds.push_back(OpProp(o,p));
 		records()->notify(&extended_pred_symbol::addPosPre,o,p);
 	};
-	void addNegPre(operator_ * o,const proposition * p) 
+	void addNegPre(operator_ * o,const proposition * p)
 	{
 		negpreconds.push_back(OpProp(o,p));
 		records()->notify(&extended_pred_symbol::addNegPre,o,p);
 	};
-	void addAdd(operator_ * o,const proposition * p) 
+	void addAdd(operator_ * o,const proposition * p)
 	{
 		adds.push_back(OpProp(o,p));
 		records()->notify(&extended_pred_symbol::addAdd,o,p);
 	};
-	void addDel(operator_ * o,const proposition * p) 
+	void addDel(operator_ * o,const proposition * p)
 	{
 		dels.push_back(OpProp(o,p));
 		records()->notify(&extended_pred_symbol::addDel,o,p);
 	};
 
-	void addPosPre(derivation_rule * o,const proposition * p) 
+	void addPosPre(derivation_rule * o,const proposition * p)
 	{
 		pospreconds.push_back(OpProp(o,p));
 		records()->notify(&extended_pred_symbol::addPosPre,o,p);
 	};
-	void addNegPre(derivation_rule * o,const proposition * p) 
+	void addNegPre(derivation_rule * o,const proposition * p)
 	{
 		negpreconds.push_back(OpProp(o,p));
 		records()->notify(&extended_pred_symbol::addNegPre,o,p);
 	};
-	void addAdd(derivation_rule * o,const proposition * p) 
+	void addAdd(derivation_rule * o,const proposition * p)
 	{
 		adds.push_back(OpProp(o,p));
 		records()->notify(&extended_pred_symbol::addAdd,o,p);
@@ -657,7 +657,7 @@ public:
 				//cout << "Strange type\n";
 				continue;
 			};
-			if((*i)->type) 
+			if((*i)->type)
 			{
 				o << (*i)->type->getName() << " ";
 				o << "[";
@@ -674,16 +674,16 @@ public:
 				o << "? ";
 			};
 		};
-		
+
 		o << ")";
 	};
-	
+
 	void write(ostream & o) const
 	{
 		o << "\nReport for: ";
 		writeName(o);
-		o << "\n------------\nInitial: " << initialState 
-				<< " Goal: " << posgoalState << " positive/ " << neggoalState << 
+		o << "\n------------\nInitial: " << initialState
+				<< " Goal: " << posgoalState << " positive/ " << neggoalState <<
 					" negative\nInitial state records:\n";
 		records()->write(o);
 		o << "\nPreconditions:\n";
@@ -704,7 +704,7 @@ public:
 				if(i->drv)   o << "\t" << i->drv->get_head()->head->getName() << "\n";
 			};
 		};
-		if(appearsStatic()) 
+		if(appearsStatic())
 		{
 			o << "Proposition appears static\n";
 			if(isDefinitelyStatic())
@@ -795,14 +795,14 @@ public:
 	{
 		return 0;
 	};
-	
+
 	virtual extended_pred_symbol * get()
 	{
 		return 0;
 	};
 
 	virtual void set(pddl_type *,Associater *) {};
-	
+
 	Associater * handle(proposition * p);
 
 	template<class TI>
@@ -837,7 +837,7 @@ private:
 
 	typedef map<double,TMap> TimedBases;
 	TimedBases timedBases;
-	
+
 public:
 	holding_pred_symbol(const string & nm) : pred_symbol(nm), a(new NodeAssociater()),
 		preds(), baseStores(), timedBases()
@@ -859,7 +859,7 @@ public:
 		return a->find(p,s,e);
 	};
 
-	void add(extended_pred_symbol * e) 
+	void add(extended_pred_symbol * e)
 	{
 //		cout << "Added " << (int)(e) << " ";
 //		e->writeName(cout);
@@ -867,7 +867,7 @@ public:
 		preds.insert(e);
 		e->setParent(this);
 	};
-	
+
 	void visit(VisitController * v) const
 	{
 		for(Preds::const_iterator i = preds.begin();i != preds.end();++i)
@@ -889,7 +889,7 @@ public:
 	{
 //		cout << "I am at " << this << "\n";
 //		cout << "Counting for ";
-//		e->writeName(cout); 
+//		e->writeName(cout);
 //		cout << "\n";
 		int c = 1;
 		vector<pair<pddl_type *,vector<const pddl_type *> > > xs(bi-ai);//tps.size());
@@ -903,13 +903,13 @@ public:
 					//cout << "Strange type (2)\n";
 					continue;
 				};
-				
+
 				if((*i)->type)
 				{
 //					cout << "Managing: " << (*i)->type->getName() << "\n";
-					xs[j] = make_pair((*i)->type,//theTC->accumulateAll((*i)->type)); 
+					xs[j] = make_pair((*i)->type,//theTC->accumulateAll((*i)->type));
 												theTC->leaves((*i)->type));
-					
+
 				}
 				else
 				{
@@ -921,7 +921,7 @@ public:
 						continue;
 					};
 					//cout << "An either type symbol!\n";
-	// OK, I think we have to find all the leaves for these either types. 
+	// OK, I think we have to find all the leaves for these either types.
 					vector<const pddl_type *> ttps;
 					for(pddl_type_list::iterator k = (*i)->either_types->begin();k != (*i)->either_types->end();++k)
 					{
@@ -942,7 +942,7 @@ public:
 		if(c == 1)
 		{
 			SimplePropStore * s = baseStores.get(typeIt(ai),typeIt(bi)); //tps.begin(),tps.end());
-			if(!s) 
+			if(!s)
 			{
 //				cout << "Built simple store\n";
 				s = new SimplePropStore(e);
@@ -978,7 +978,7 @@ public:
 		if(c == 1)
 		{
 			SimplePropStore * s = timedBases[t].get(typeIt(tps.begin()),typeIt(tps.end()));
-			if(!s) 
+			if(!s)
 			{
 				s = new SimplePropStore(e);
 				timedBases[t].insert(typeIt(tps.begin()),typeIt(tps.end()),s);
@@ -994,7 +994,7 @@ public:
 			return new CompoundPropStore(c,xs,timedBases[t],e,a);
 		};
 	};
-	
+
 	typedef Preds::iterator PIt;
 	PIt pBegin() {return preds.begin();};
 	PIt pEnd() {return preds.end();};
@@ -1010,12 +1010,12 @@ class LeafAssociater : public Associater {
 private:
 	extended_pred_symbol * s;
 public:
-	LeafAssociater(pred_symbol * nm,proposition * p) : 
-		s((*buildEPS)(nm,p)) 
+	LeafAssociater(pred_symbol * nm,proposition * p) :
+		s((*buildEPS)(nm,p))
 	{};
 	template<class TI>
-	LeafAssociater(pred_symbol * nm,TI st,TI e) : 
-		s((*buildEPS)(nm,st,e)) 
+	LeafAssociater(pred_symbol * nm,TI st,TI e) :
+		s((*buildEPS)(nm,st,e))
 	{
 		TI x(st);
 		while(x != e)
@@ -1066,7 +1066,7 @@ extended_pred_symbol * Associater::find(pred_symbol * p,TI s,TI e)
 };
 
 class TypePredSubstituter : public VisitController {
-public: 	
+public:
 	virtual void visit_simple_goal(simple_goal * s)
 	{
 		s->getProp()->visit(this);
@@ -1075,37 +1075,37 @@ public:
 	{
 		HPS(p->head)->set_prop(p);
 	};
-	virtual void visit_qfied_goal(qfied_goal * p) 
+	virtual void visit_qfied_goal(qfied_goal * p)
 	{p->getGoal()->visit(this);};
-	virtual void visit_conj_goal(conj_goal * p) 
+	virtual void visit_conj_goal(conj_goal * p)
 	{p->getGoals()->visit(this);};
-	virtual void visit_disj_goal(disj_goal * p) 
+	virtual void visit_disj_goal(disj_goal * p)
 	{p->getGoals()->visit(this);};
-	virtual void visit_timed_goal(timed_goal * p) 
+	virtual void visit_timed_goal(timed_goal * p)
 	{p->getGoal()->visit(this);};
-	virtual void visit_imply_goal(imply_goal * p) 
+	virtual void visit_imply_goal(imply_goal * p)
 	{
 		p->getAntecedent()->visit(this);
 		p->getConsequent()->visit(this);
 	};
-	virtual void visit_neg_goal(neg_goal * p) 
+	virtual void visit_neg_goal(neg_goal * p)
 	{
 		p->getGoal()->visit(this);
 	};
-	virtual void visit_simple_effect(simple_effect * p) 
+	virtual void visit_simple_effect(simple_effect * p)
 	{
 		p->prop->visit(this);
 	};
-	virtual void visit_forall_effect(forall_effect * p) 
+	virtual void visit_forall_effect(forall_effect * p)
 	{
 		p->getEffects()->visit(this);
 	};
-	virtual void visit_cond_effect(cond_effect * p) 
+	virtual void visit_cond_effect(cond_effect * p)
 	{
 		p->getCondition()->visit(this);
 		p->getEffects()->visit(this);
 	};
-	virtual void visit_timed_effect(timed_effect * p) 
+	virtual void visit_timed_effect(timed_effect * p)
 	{
 		p->effs->visit(this);
 	};
@@ -1113,7 +1113,7 @@ public:
 	{
 		p->effs->visit(this);
 	};
-	virtual void visit_effect_lists(effect_lists * p) 
+	virtual void visit_effect_lists(effect_lists * p)
 	{
 		p->add_effects.pc_list<simple_effect*>::visit(this);
 		p->forall_effects.pc_list<forall_effect*>::visit(this);
@@ -1121,7 +1121,7 @@ public:
 		p->timed_effects.pc_list<timed_effect*>::visit(this);
 		p->del_effects.pc_list<simple_effect*>::visit(this);
 	};
-	virtual void visit_operator_(operator_ * p) 
+	virtual void visit_operator_(operator_ * p)
 	{
 		p->precondition->visit(this);
 		p->effects->visit(this);
@@ -1135,7 +1135,7 @@ public:
 	{
 		visit_operator_(static_cast<operator_*>(p));
 	};
-	virtual void visit_durative_action(durative_action * p) 
+	virtual void visit_durative_action(durative_action * p)
 	{
 		visit_operator_(static_cast<operator_*>(p));
 	};
@@ -1147,13 +1147,13 @@ public:
 	{
 		visit_operator_(static_cast<operator_*>(p));
 	};
-	virtual void visit_problem(problem * p) 
+	virtual void visit_problem(problem * p)
 	{
 		p->initial_state->visit(this);
 		if(p->the_goal) p->the_goal->visit(this);
 	};
 
-	virtual void visit_domain(domain * p) 
+	virtual void visit_domain(domain * p)
 	{
 		visit_operator_list(p->ops);
 		if (p->drvs) visit_derivations_list(p->drvs);
@@ -1184,32 +1184,32 @@ private:
 	{
 		return (find(toIgnore.begin(),toIgnore.end(),p) == toIgnore.end());
 	};
-	
+
 public:
-	Analyser() : initially(false), when(0), finally(false), 
+	Analyser() : initially(false), when(0), finally(false),
 		pos(true), adding(true), op(0), drv(0), toIgnore()
 	{};
-	
+
 	Analyser(const vector<pred_symbol *> & ti) : initially(false), when(0), finally(false),
 		pos(true), adding(true), op(0), drv(0), toIgnore(ti)
 	{};
 
-	vector<durative_action *> & getFixedDAs() 
+	vector<durative_action *> & getFixedDAs()
 	{
 		return das;
 	};
-	
-	virtual void visit_pred_decl(pred_decl * p) 
+
+	virtual void visit_pred_decl(pred_decl * p)
 	{
 		p->getPred()->visit(this);
 	};
-	virtual void visit_func_decl(func_decl * p) 
+	virtual void visit_func_decl(func_decl * p)
 	{
 		p->getFunction()->visit(this);
 	};
-	virtual void visit_simple_goal(simple_goal * p) 
+	virtual void visit_simple_goal(simple_goal * p)
 	{
-		if(finally) 
+		if(finally)
 		{
 			EPS(p->getProp()->head)->setGoal(pos);
 		}
@@ -1230,26 +1230,26 @@ public:
 			};
 		};
 	};
-	virtual void visit_qfied_goal(qfied_goal * p) 
+	virtual void visit_qfied_goal(qfied_goal * p)
 	{p->getGoal()->visit(this);};
-	virtual void visit_conj_goal(conj_goal * p) 
+	virtual void visit_conj_goal(conj_goal * p)
 	{if(p) p->getGoals()->visit(this);};
-	virtual void visit_disj_goal(disj_goal * p) 
+	virtual void visit_disj_goal(disj_goal * p)
 	{p->getGoals()->visit(this);};
-	virtual void visit_timed_goal(timed_goal * p) 
+	virtual void visit_timed_goal(timed_goal * p)
 	{p->getGoal()->visit(this);};
-	virtual void visit_imply_goal(imply_goal * p) 
+	virtual void visit_imply_goal(imply_goal * p)
 	{
 		p->getAntecedent()->visit(this);
 		p->getConsequent()->visit(this);
 	};
-	virtual void visit_neg_goal(neg_goal * p) 
+	virtual void visit_neg_goal(neg_goal * p)
 	{
 		pos = !pos;
 		p->getGoal()->visit(this);
 		pos = !pos;
 	};
-	virtual void visit_simple_effect(simple_effect * p) 
+	virtual void visit_simple_effect(simple_effect * p)
 	{
 		if(initially)
 		{
@@ -1284,16 +1284,16 @@ public:
 			};
 		};
 	};
-	virtual void visit_forall_effect(forall_effect * p) 
+	virtual void visit_forall_effect(forall_effect * p)
 	{
 		p->getEffects()->visit(this);
 	};
-	virtual void visit_cond_effect(cond_effect * p) 
+	virtual void visit_cond_effect(cond_effect * p)
 	{
 		p->getCondition()->visit(this);
 		p->getEffects()->visit(this);
 	};
-	virtual void visit_timed_effect(timed_effect * p) 
+	virtual void visit_timed_effect(timed_effect * p)
 	{
 		p->effs->visit(this);
 	};
@@ -1303,7 +1303,7 @@ public:
 		p->effs->visit(this);
 		when = 0;
 	};
-	virtual void visit_effect_lists(effect_lists * p) 
+	virtual void visit_effect_lists(effect_lists * p)
 	{
 		p->assign_effects.pc_list<assignment*>::visit(this);
 		p->add_effects.pc_list<simple_effect*>::visit(this);
@@ -1315,7 +1315,7 @@ public:
 		p->del_effects.pc_list<simple_effect*>::visit(this);
 		adding = whatwas;
 	};
-	virtual void visit_operator_(operator_ * p) 
+	virtual void visit_operator_(operator_ * p)
 	{
 		op = p;
 		adding = true;
@@ -1323,7 +1323,7 @@ public:
 		p->effects->visit(this);
 		op = 0;
 	};
-	virtual void visit_derivation_rule(derivation_rule * p) 
+	virtual void visit_derivation_rule(derivation_rule * p)
 	{
 		drv = p;
 		adding = true;
@@ -1335,7 +1335,7 @@ public:
 	{
 		visit_operator_(static_cast<operator_*>(p));
 	};
-	virtual void visit_durative_action(durative_action * p) 
+	virtual void visit_durative_action(durative_action * p)
 	{
 		visit_operator_(static_cast<operator_*>(p));
 		das.push_back(p);
@@ -1348,7 +1348,7 @@ public:
 	{
 		visit_operator_(static_cast<operator_*>(p));
 	};
-	virtual void visit_problem(problem * p) 
+	virtual void visit_problem(problem * p)
 	{
 		initially = true;
 		p->initial_state->visit(this);
@@ -1358,7 +1358,7 @@ public:
 		finally = false;
 	};
 
-	virtual void visit_domain(domain * p) 
+	virtual void visit_domain(domain * p)
 	{
 		visit_operator_list(p->ops);
 		if (p->drvs) visit_derivations_list(p->drvs);
@@ -1372,7 +1372,7 @@ public:
 			{
 				if(c->getOp() == E_EQUALS)
 				{
-					// Should check that LHS is duration variable - but we will 
+					// Should check that LHS is duration variable - but we will
 					// be lazy and assume it is for the moment!
 					const expression * e = c->getRHS();
 					AbstractEvaluator ae;
@@ -1383,7 +1383,7 @@ public:
 					};
 				};
 			}
-				
+
 		};
 		fdas.swap(das);
 	};
@@ -1420,33 +1420,33 @@ public:
 		p->getRHS()->visit(this);
 	};
 
-	virtual void visit_plus_expression(plus_expression *p) 
-	{
-		p->getLHS()->visit(this);
-		p->getRHS()->visit(this);		
-	};
-	virtual void visit_minus_expression(minus_expression *p) 
+	virtual void visit_plus_expression(plus_expression *p)
 	{
 		p->getLHS()->visit(this);
 		p->getRHS()->visit(this);
 	};
-	virtual void visit_mul_expression(mul_expression *p) 
+	virtual void visit_minus_expression(minus_expression *p)
 	{
 		p->getLHS()->visit(this);
 		p->getRHS()->visit(this);
 	};
-	virtual void visit_div_expression(div_expression *p) 
+	virtual void visit_mul_expression(mul_expression *p)
 	{
 		p->getLHS()->visit(this);
 		p->getRHS()->visit(this);
 	};
-	virtual void visit_uminus_expression(uminus_expression *p) 
+	virtual void visit_div_expression(div_expression *p)
+	{
+		p->getLHS()->visit(this);
+		p->getRHS()->visit(this);
+	};
+	virtual void visit_uminus_expression(uminus_expression *p)
 	{
 		p->getExpr()->visit(this);
 	};
-	virtual void visit_func_term(func_term *p) 
+	virtual void visit_func_term(func_term *p)
 	{
-		if(finally) 
+		if(finally)
 		{
 			EFT(p->getFunction())->addGoal();
 		}

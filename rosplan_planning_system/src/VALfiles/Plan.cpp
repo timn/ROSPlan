@@ -1291,7 +1291,7 @@ const CtsFunction * ActiveCtsEffects::buildNumericalSoln(const ActiveFE * afe)
    vector<pair<const CtsFunction *,bool> > discharge;
    pair<pair<const expression*,bool>,const Environment *> exprn;
    bool exprnDefined = false;
-	const FuncExp * fexp = 0;
+   const FuncExp * fexp = 0;
             
    for(vector<pair<pair<const expression*,bool>,const Environment *> >::const_iterator i = afe->exprns.begin(); i != afe->exprns.end(); ++i)
    {
@@ -1421,7 +1421,7 @@ const CtsFunction * ActiveCtsEffects::buildNumericalSoln(const ActiveFE * afe)
 				throw dee;
 			};
 
-        
+      fexp = fexp;   
       
     const BatteryCharge * newBatteryCharge = new BatteryCharge(new Polynomial(bPoly),mValue,discharge,0, localUpdateTime,afe->fe->evaluate(&(vld->getState())),accuracy);
                
@@ -1504,7 +1504,7 @@ void EffectsRecord::enact(State * s) const
    else
 
    {
-      
+      	s->recordResponsibles(responsibleForProps,responsibleForPNEs);
           	for(vector<const SimpleProposition *>::const_iterator i = dels.begin();i != dels.end();++i)
       	{
       		s->delChange(*i);
