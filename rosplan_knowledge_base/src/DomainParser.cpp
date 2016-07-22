@@ -1,5 +1,14 @@
 #include "rosplan_knowledge_base/DomainParser.h"
 
+namespace VAL {
+	bool LaTeX;
+	bool ContinueAnyway;
+	bool ErrorReport;
+	bool InvariantWarnings;
+
+	analysis an_analysis;
+}
+
 /* implementation of DomainParser.h */
 namespace KCL_rosplan {
 

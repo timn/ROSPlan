@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "ptree.h"
-#include "VisitController.h"
+#include "parsing/ptree.h"
+#include "parsing/VisitController.h"
 
 #include "rosplan_knowledge_msgs/DomainFormula.h"
 #include "rosplan_knowledge_msgs/DomainOperator.h"

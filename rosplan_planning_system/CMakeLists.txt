@@ -32,6 +32,7 @@ catkin_package(
 include_directories(include)
 include_directories(${catkin_INCLUDE_DIRS})
 include_directories(src/VALfiles)
+include_directories(src/VALfiles/parsing)
 
 find_package(FLEX REQUIRED)
 
@@ -49,7 +50,7 @@ set(VAL_SOURCES
 	src/VALfiles/SimpleEval.cpp
 	src/VALfiles/TIM.cpp
 	src/VALfiles/TimSupport.cpp
-	src/VALfiles/ToFunction.cpp
+##	src/VALfiles/ToFunction.cpp
 	src/VALfiles/TypedAnalyser.cpp
 ##	src/VALfiles/ValidatorAPI.cpp
 	src/VALfiles/instantiation.cpp

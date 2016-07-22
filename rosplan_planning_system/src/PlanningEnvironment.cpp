@@ -1,5 +1,14 @@
 #include "rosplan_planning_system/PlanningEnvironment.h"
 
+namespace VAL {
+	bool LaTeX;
+	bool ContinueAnyway;
+	bool ErrorReport;
+	bool InvariantWarnings;
+
+	analysis an_analysis;
+}
+
 /* implementation of rosplan_planning_system::PlanningEnvironment */
 namespace KCL_rosplan {
 

@@ -6,7 +6,7 @@
 #include "ros/ros.h"
 #include "rosplan_knowledge_msgs/GetInstanceService.h"
 #include "rosplan_knowledge_msgs/GetAttributeService.h"
-#include "ptree.h"
+#include "parsing/ptree.h"
 #include "FlexLexer.h"
 #include <fstream>
 #include <sstream>
@@ -21,7 +21,7 @@ extern int yyparse();
 extern int yydebug;
 
 namespace VAL {
-	extern analysis an_analysis;
+	//extern analysis an_analysis;
 	extern yyFlexLexer* yfl;
 };
 
