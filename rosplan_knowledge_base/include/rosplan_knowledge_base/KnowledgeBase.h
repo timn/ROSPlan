@@ -93,6 +93,10 @@ namespace KCL_rosplan {
 		// conditional planning services
 		bool updateKnowledgeConstraintsOneOf(rosplan_knowledge_msgs::KnowledgeUpdateServiceArray::Request  &req, rosplan_knowledge_msgs::KnowledgeUpdateServiceArray::Response &res);
 		// TODO bool updateKnowledgeConstraintsUnknowns(rosplan_knowledge_msgs::KnowledgeUpdateServiceArray::Request  &req, rosplan_knowledge_msgs::KnowledgeUpdateServiceArray::Response &res);
+
+		// add constants from the domain as objects to the knowledge base
+		void addConstants();
+
 	};
 }
 #endif

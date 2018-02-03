@@ -191,6 +191,7 @@ namespace KCL_rosplan {
 		model_facts.clear();
 		model_functions.clear();
 		model_goals.clear();
+		addConstants();
 	}
 
 	/**
@@ -300,6 +301,21 @@ namespace KCL_rosplan {
 		ROS_INFO("KCL: (KB) Adding mission goal (%s%s)",
 		         msg.attribute_name.c_str(), param_str.c_str());
 		model_goals.push_back(msg);
+	}
+
+	void KnowledgeBase::addConstants()
+	{
+		if(!domain_parser.domain_parsed) return;
+		VAL::const_symbol_list* constants = domain_parser.domain->constants;
+		if(constants) {
+			for (VAL::const_symbol_list::const_iterator ci = constants->begin(); ci != constants->end(); ci++)
+			{
+				const VAL::const_symbol* constant = *ci;
+				printf("Adding constant %s of type %s\n",
+				       constant->getName().c_str(), constant->type->getName().c_str());
+				model_instances[constant->type->getName()].push_back(constant->getName());
+			}
+		}
 	}
 
 	/*----------------*/
@@ -497,6 +513,7 @@ int main(int argc, char **argv)
 	kb.domain_parser.domain_parsed = false;
 	kb.domain_parser.parseDomain(domainPath);
 	kb.use_unknowns = useUnknowns;
+	kb.addConstants();
 
 	// fetch domain info
 	ros::ServiceServer typeServer = n.advertiseService("/kcl_rosplan/get_domain_types", &KCL_rosplan::KnowledgeBase::getTypes, &kb);
